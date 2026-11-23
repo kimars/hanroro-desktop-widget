@@ -1,0 +1,14 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+.env
+.venv/
+build/
+build-ci/
+dist/
+/release/
+settings-preview/
+*.exe
+*.o
+*.obj

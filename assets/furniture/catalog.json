@@ -1,0 +1,236 @@
+{
+  "sofa": {
+    "title": "패브릭 소파",
+    "width": 440,
+    "height": 220,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "armchair": {
+    "title": "라운지 체어",
+    "width": 205,
+    "height": 235,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "coffee_table": {
+    "title": "낮은 테이블",
+    "width": 340,
+    "height": 158,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "side_table": {
+    "title": "원형 협탁",
+    "width": 162,
+    "height": 205,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "bed": {
+    "title": "싱글 침대",
+    "width": 450,
+    "height": 265,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "wardrobe": {
+    "title": "옷장",
+    "width": 234,
+    "height": 360,
+    "group": "수납",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "drawers": {
+    "title": "서랍장",
+    "width": 260,
+    "height": 238,
+    "group": "수납",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "vinyl_rack": {
+    "title": "레코드 수납장",
+    "width": 286,
+    "height": 258,
+    "group": "수납",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "record_crate": {
+    "title": "음반 상자",
+    "width": 184,
+    "height": 155,
+    "group": "수납",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "books": {
+    "title": "책 더미",
+    "width": 146,
+    "height": 112,
+    "group": "소품",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "mug": {
+    "title": "머그컵",
+    "width": 104,
+    "height": 108,
+    "group": "소품",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "vase": {
+    "title": "꽃병",
+    "width": 126,
+    "height": 193,
+    "group": "식물",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "mirror": {
+    "title": "전신 거울",
+    "width": 136,
+    "height": 324,
+    "group": "패브릭 · 벽",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "rug": {
+    "title": "타원 러그",
+    "width": 470,
+    "height": 148,
+    "group": "패브릭 · 벽",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "curtain": {
+    "title": "린넨 커튼",
+    "width": 306,
+    "height": 300,
+    "group": "패브릭 · 벽",
+    "motion": "sway",
+    "pivotX": 0.5,
+    "pivotY": 0.08
+  },
+  "pendant": {
+    "title": "펜던트 조명",
+    "width": 190,
+    "height": 320,
+    "group": "조명",
+    "motion": "sway",
+    "pivotX": 0.5,
+    "pivotY": 0.055
+  },
+  "string_lights": {
+    "title": "전구 가랜드",
+    "width": 340,
+    "height": 100,
+    "group": "조명",
+    "motion": "glow",
+    "pivotX": 0.5,
+    "pivotY": 0.1
+  },
+  "candle": {
+    "title": "캔들",
+    "width": 108,
+    "height": 158,
+    "group": "조명",
+    "motion": "flame",
+    "pivotX": 0.5,
+    "pivotY": 0.36
+  },
+  "fan": {
+    "title": "선풍기",
+    "width": 160,
+    "height": 252,
+    "group": "소품",
+    "motion": "spin",
+    "pivotX": 0.5,
+    "pivotY": 0.31746031746031744
+  },
+  "speaker": {
+    "title": "스피커",
+    "width": 120,
+    "height": 232,
+    "group": "소품",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "desk": {
+    "title": "책상",
+    "width": 620,
+    "height": 260,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "chair": {
+    "title": "의자",
+    "width": 156,
+    "height": 240,
+    "group": "가구",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "shelf": {
+    "title": "책장",
+    "width": 190,
+    "height": 330,
+    "group": "수납",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  },
+  "lamp": {
+    "title": "스탠드",
+    "width": 112,
+    "height": 220,
+    "group": "조명",
+    "motion": "cord",
+    "pivotX": 0.8214285714285714,
+    "pivotY": 0.45454545454545453
+  },
+  "plant": {
+    "title": "화분",
+    "width": 126,
+    "height": 174,
+    "group": "식물",
+    "motion": "leaves",
+    "pivotX": 0.5,
+    "pivotY": 0.6609195402298851
+  },
+  "photo": {
+    "title": "사진 액자",
+    "width": 190,
+    "height": 230,
+    "group": "사진",
+    "motion": "",
+    "pivotX": 0.5,
+    "pivotY": 0.5
+  }
+}

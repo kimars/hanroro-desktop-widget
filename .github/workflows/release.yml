@@ -1,0 +1,40 @@
+name: Windows release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install build tools
+        run: |
+          python -m pip install pefile
+          choco install nsis --no-progress -y
+      - name: Build installer
+        run: python distribution/build_windows.py
+      - name: Keep build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HanroroWidget-Windows-x64
+          path: release/HanroroWidget_Setup_x64.exe*
+      - name: Publish version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = python -c "from release_info import VERSION; print(VERSION)"
+          gh release view "v$version" --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Version v$version already exists. Increase VERSION before publishing." }
+          gh release create "v$version" release/HanroroWidget_Setup_x64.exe release/HanroroWidget_Setup_x64.exe.sha256 --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "한로로 바탕화면 위젯 $version" --notes-file distribution/release/notes.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
