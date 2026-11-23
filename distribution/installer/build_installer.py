@@ -11,12 +11,12 @@ UNINSTALL=r'Software\Microsoft\Windows\CurrentVersion\Uninstall\MarsHanroroWidge
 
 def nsis(value):return str(value).replace('$','$$').replace('"','$\\"')
 
-def build_script(payload,output,work):
+def build_script(payload,output,work,target='amd64-unicode'):
     payload=Path(payload).resolve();output=Path(output).resolve();work=Path(work).resolve();work.mkdir(parents=True,exist_ok=True)
     required=[payload/EXE,payload/'_internal/main.py',payload/'_internal/pythonw.exe',ROOT/'CloseHanroro.exe']
     if not all(p.is_file() for p in required):raise ValueError('Portable application or shutdown helper is missing.')
     files=sorted(p for p in payload.rglob('*') if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.log'))
-    manifest={'name':APP,'version':VERSION,'publisher':'마스','authenticode_signed':False,'data_retained_on_uninstall':True,'files':[{'path':p.relative_to(payload).as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in files]}
+    manifest={'name':APP,'version':VERSION,'installer_target':target,'publisher':'마스','authenticode_signed':False,'data_retained_on_uninstall':True,'files':[{'path':p.relative_to(payload).as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in files]}
     marker=work/'installation-manifest.json';marker.write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     # Every removal is enumerated: do not recursively delete an arbitrary install directory.
     dirs={Path('.')}
@@ -32,7 +32,7 @@ def build_script(payload,output,work):
         rel=str(d).replace('/','\\');prefix='$INSTDIR'+('' if rel=='.' else '\\'+nsis(rel))
         remove.extend([f'Delete "{prefix}\\__pycache__\\*.pyc"',f'RMDir "{prefix}\\__pycache__"',f'RMDir "{prefix}"'])
     script=f'''Unicode true
-Target amd64-unicode
+Target {target}
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
@@ -192,7 +192,11 @@ SectionEnd
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--payload',required=True);parser.add_argument('--output',required=True);parser.add_argument('--work',required=True);parser.add_argument('--makensis',default='makensis');parser.add_argument('--nsis-dir');args=parser.parse_args()
-    script,manifest=build_script(args.payload,args.output,args.work);env=os.environ.copy()
+    # Official Windows NSIS packages may ship only the x86 bootstrap. It installs
+    # the same x64 application, uses the 64-bit registry view and rejects 32-bit OSes.
+    compiler_root=Path(args.nsis_dir) if args.nsis_dir else Path(args.makensis).resolve().parent
+    target='amd64-unicode' if os.name!='nt' or (compiler_root/'Stubs/zlib-amd64-unicode').is_file() else 'x86-unicode'
+    script,manifest=build_script(args.payload,args.output,args.work,target);env=os.environ.copy()
     if args.nsis_dir:env['NSISDIR']=str(Path(args.nsis_dir).resolve())
     subprocess.run([args.makensis,'-V2',str(script)],env=env,check=True)
     print('Installer:',args.output);print('Bundled files:',len(manifest['files']))
