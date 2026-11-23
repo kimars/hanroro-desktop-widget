@@ -1,5 +1,7 @@
 # 한로로 바탕화면 위젯
 
+[Windows 설치 파일 다운로드](https://github.com/kimars/hanroro-desktop-widget/releases/latest/download/HanroroWidget_Setup_x64.exe) · [변경 내역](https://github.com/kimars/hanroro-desktop-widget/releases)
+
 설치형은 HanroroWidget_Setup_x64.exe 하나를 실행합니다. 설치 후 시작 메뉴 또는 바탕화면 아이콘을 사용하세요. Windows 설치된 앱 목록에서 제거할 수 있으며 사용자 메모·설정·사진은 유지됩니다.
 
 Windows 11 x64용 바탕화면 위젯입니다. 실행용 ZIP은 압축을 전부 풀고 EXE를 실행합니다. EXE와 _internal 폴더를 함께 보관하세요. 업데이트할 때는 이전 앱을 종료하고 새 폴더의 EXE를 실행하세요. 설정과 메모는 앱 폴더와 별도로 보관합니다.
