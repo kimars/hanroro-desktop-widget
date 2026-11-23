@@ -68,7 +68,7 @@ copy(PYTHON/'LICENSE.txt',licenses/'Python-LICENSE.txt');copy(SOURCE/'THIRD_PART
 copy(Path(args.launcher),OUT/'한로로 바탕화면 위젯.exe')
 BUILD_ID='portable-'+hashlib.sha256(b''.join(p.read_bytes() for p in sorted(SOURCE.glob('*.py')))).hexdigest()[:16]
 (CORE/'portable_build.py').write_text('BUILD_ID='+repr(BUILD_ID)+'\n',encoding='utf-8')
-p=CORE/'main.py';s=p.read_text();old="handled['done']=True;message=bytes(conn.readAll()).decode('utf-8','replace').strip();conn.disconnectFromServer();conn.deleteLater()"
+p=CORE/'main.py';s=p.read_text(encoding='utf-8');old="handled['done']=True;message=bytes(conn.readAll()).decode('utf-8','replace').strip();conn.disconnectFromServer();conn.deleteLater()"
 new="handled['done']=True;message=bytes(conn.readAll()).decode('utf-8','replace').strip()\n                if message=='build-id':\n                    from portable_build import BUILD_ID\n                    conn.write(BUILD_ID.encode('ascii'));conn.waitForBytesWritten(500)\n                conn.disconnectFromServer();conn.deleteLater()\n                if message=='build-id':return"
 assert old in s;s=s.replace(old,new);p.write_text(s,encoding='utf-8')
 (OUT/'build-info.json').write_text(json.dumps({'name':'한로로 바탕화면 위젯','build':BUILD_ID,'architecture':'Windows x64','runtime':'Python 3.12.10 / PySide6 6.12.0','source_tests_passed':110,'native_launcher':'Windows x64 GUI','windows_execution_tested':False,'company_name':'마스','authenticode_signed':False},ensure_ascii=False,indent=2),encoding='utf-8')
