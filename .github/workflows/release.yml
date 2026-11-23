@@ -1,5 +1,9 @@
 name: Windows release
 on:
+  push:
+    paths:
+      - release_info.py
+      - .github/workflows/release.yml
   workflow_dispatch:
 permissions:
   contents: write
