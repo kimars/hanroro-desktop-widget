@@ -91,7 +91,7 @@ class Program:
         if args.smoke_run:QTimer.singleShot(2500,lambda:self.app.exit(1 if self.errors else 0))
         if self.store.load_warning:QTimer.singleShot(1200,lambda:self.bridge.toast.emit(self.store.load_warning))
     def auto_check_updates(self):
-        if self.store.data.get('updatesAutoCheck',True):self.bridge.updates.check()
+        if self.store.data.get('updatesAutoCheck',True) or self.store.data.get('updatesAutoInstall',False):self.bridge.updates.check()
     def update_available(self,version):
         self.bridge.toast.emit('새 버전 '+version+' · 설정에서 업데이트할 수 있어요.')
         if self.tray:self.tray.showMessage('한로로 위젯 업데이트','새 버전 '+version+'이 있습니다. 설정 → 업데이트에서 설치하세요.')
@@ -241,7 +241,7 @@ class Program:
         if self._shutting_down:return
         self._shutting_down=True;logging.info('Shutdown started')
         self.wallpaper_jobs.cancel()
-        self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.updates.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()
+        self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.update_prompt.close();self.bridge.updates.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()
         for view in self.bridge.views:
             view.hide();view.setSource(QUrl())
         if self.tray:self.tray.hide()

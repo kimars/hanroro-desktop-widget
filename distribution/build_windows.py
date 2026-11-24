@@ -4,7 +4,7 @@ import hashlib,subprocess,sys,urllib.request,zipfile,os
 ROOT=Path(__file__).resolve().parents[1]
 WORK=ROOT/'build-ci';RUNTIME=WORK/'python';PAYLOAD=WORK/'HanroroWidget'
 if sys.platform!='win32':raise SystemExit('Windows build required')
-required=[ROOT/'assets/loop.mp4',*[ROOT/'assets/photos'/('photo'+str(i)+'.jpg') for i in [1,2,3,4,6]]]
+required=[ROOT/'assets/ui/update-character.png',ROOT/'assets/loop.mp4',*[ROOT/'assets/photos'/('photo'+str(i)+'.jpg') for i in [1,2,3,4,6]]]
 if not all(p.is_file() for p in required):raise SystemExit('Bundled photo/video assets are missing.')
 WORK.mkdir(exist_ok=True);RUNTIME.mkdir(exist_ok=True)
 archive=WORK/'python-embed.zip'

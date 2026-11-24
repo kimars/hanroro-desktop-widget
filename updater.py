@@ -13,7 +13,7 @@ class Updater(QObject):
     def publish(self,data):
         self.data={**self.data,**data,'current':VERSION};self.changed.emit()
         if data.get('status')=='available':self.available.emit(data['version'])
-        if data.get('status')=='ready' and self.install_after:self.install_after=False;QTimer.singleShot(0,self.install)
+        if data.get('status')=='ready' and self.install_after and not self.process:self.install_after=False;QTimer.singleShot(0,self.install)
     def check(self):self.start('check')
     def download(self):self.install_after=True;self.start('download')
     def cancel(self):
@@ -44,6 +44,7 @@ class Updater(QObject):
     def finished(self,p):
         if self.process is not p:return
         self.read();self.process=None;self.watch.stop();p.deleteLater()
+        if self.data['status']=='ready' and self.install_after:self.install_after=False;QTimer.singleShot(0,self.install)
         if self.data['status'] in ('checking','downloading'):self.publish({'status':'error','message':'업데이트 연결이 끊겼습니다. 다시 확인해주세요.'})
     def failed(self,p,message):
         if self.process is p:self.stop();self.publish({'status':'error','message':message})

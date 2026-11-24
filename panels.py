@@ -459,7 +459,12 @@ class Settings(QDialog):
         self.update_notes=QPlainTextEdit();self.update_notes.setReadOnly(True);self.update_notes.setMaximumHeight(180);self.update_notes.setPlaceholderText('새 버전의 변경 내용');v.addWidget(self.update_notes)
         self.update_progress=QProgressBar();self.update_progress.setRange(0,100);v.addWidget(self.update_progress)
         row=QHBoxLayout();self.update_check=button('업데이트 확인',self.b.updates.check);row.addWidget(self.update_check);self.update_apply=button('업데이트',self.apply_update,True);row.addWidget(self.update_apply);self.update_cancel=button('취소',self.b.updates.cancel);row.addWidget(self.update_cancel);v.addLayout(row)
-        auto=QCheckBox('새 버전 자동 확인');auto.setChecked(self.b.store.data['updatesAutoCheck']);auto.toggled.connect(lambda active:self.b.set_option('updatesAutoCheck',active));v.addWidget(auto);v.addStretch();self.b.updates.changed.connect(self.refresh_update);self.refresh_update();self.add(w)
+        self.update_auto_check=QCheckBox('새 버전 자동 확인');self.update_auto_check.setChecked(self.b.store.data['updatesAutoCheck']);self.update_auto_check.toggled.connect(lambda active:self.b.set_option('updatesAutoCheck',active));v.addWidget(self.update_auto_check)
+        self.update_auto_install=QCheckBox('자동 다운로드 · 설치');self.update_auto_install.setChecked(self.b.store.data['updatesAutoInstall']);self.update_auto_install.setToolTip('알림 후 15초 뒤 설치합니다. 입력·배치 편집 중에는 기다립니다.');self.update_auto_install.toggled.connect(self.set_auto_install);self.update_auto_check.setEnabled(not self.update_auto_install.isChecked());v.addWidget(self.update_auto_install);v.addWidget(button('알림 미리보기',self.b.previewUpdateNotice));v.addStretch();self.b.updates.changed.connect(self.refresh_update);self.refresh_update();self.add(w)
+    def set_auto_install(self,active):
+        self.b.set_option('updatesAutoInstall',active)
+        self.update_auto_check.setEnabled(not active)
+        if active:self.update_auto_check.setChecked(True)
     def apply_update(self):
         if self.b.updates.data['status']=='ready':self.b.updates.install()
         else:self.b.updates.download()

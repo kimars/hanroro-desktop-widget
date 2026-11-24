@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from PySide6.QtCore import QObject,Property,Signal,Slot,QTimer,QUrl,QStandardPaths
 from PySide6.QtGui import QDesktopServices,QRegion,QColor
 from PySide6.QtCore import QRect
-from PySide6.QtWidgets import QFileDialog,QMessageBox
+from PySide6.QtWidgets import QFileDialog,QMessageBox,QApplication
 from state import Store,WIDGETS,WIDGET_SIZES,layout_for
 from wallpaper import render_wallpaper
 from app_catalog import app_shell_target
@@ -20,11 +20,13 @@ from telemetry_link import TelemetryLink
 from desktop_features import DesktopFeatures
 from settings_writer import SettingsWriter
 from updater import Updater
+from update_prompt import UpdatePrompt
 from decoration_model import DecorationModel
 from room_items import CATALOG,normalize_item
 
 log=logging.getLogger(__name__)
 class Bridge(QObject):
+    updateNoticeChanged=Signal()
     decorationsChanged=Signal();dragActivity=Signal();layoutChanged=Signal();audioChanged=Signal();featureChanged=Signal();telemetryChanged=Signal()
     stateChanged=Signal();photoChanged=Signal();musicChanged=Signal();pausedChanged=Signal()
     memoChanged=Signal();inputChanged=Signal();memoInputRequested=Signal();editChanged=Signal();toast=Signal(str);requestRestore=Signal();requestSection=Signal(int);requestShowDesktop=Signal();requestSettings=Signal();requestMemo=Signal();requestEvents=Signal();requestDesktop=Signal();requestPreview=Signal()
@@ -33,6 +35,7 @@ class Bridge(QObject):
         self._state_cache=None;self._wallpaper_cache_key=None;self._wallpaper_cache_path=None;self._region_key=None;self._interactive_region=QRegion()
         self._input=False;self._edit=False;self._paused=False;self._settings=None;self.wallpaper_size=(1920,1080)
         self.updates=Updater(store.directory,Path(__file__).resolve().parent/'main.py',self);self.updates.notice.connect(self.toast)
+        self.update_prompt=UpdatePrompt(self.updates,store,lambda:not self._input and not self._edit and QApplication.activeModalWidget() is None,self);self.update_prompt.changed.connect(self.updateNoticeChanged)
         self.room_model=DecorationModel(store.data['decorations'],self)
         self._photo_index=int(store.data['photoIndex']);self._pending_task_attachments=[]
         self.media=MediaLink(store.directory,Path(__file__).resolve().parent/'main.py',self);self.media.preferred=store.data.get('mediaSource','');self.media.changed.connect(self.musicChanged);self.media.notice.connect(self.toast)
@@ -53,6 +56,16 @@ class Bridge(QObject):
             p=Path(store.data[key])
             if store.data[key] and not p.is_file() and (self.assets/p.name).is_file():store.data[key]=str(self.assets/p.name)
         store.data['photos']=[str(self.assets/'photos'/Path(p).name) if not Path(p).is_file() and (self.assets/'photos'/Path(p).name).is_file() else p for p in store.data['photos']]
+    @Property('QVariantMap',notify=updateNoticeChanged)
+    def updateNotice(self):return dict(self.update_prompt.data)
+    @Slot()
+    def dismissUpdateNotice(self):self.update_prompt.dismiss()
+    @Slot()
+    def previewUpdateNotice(self):self.update_prompt.preview()
+    @Slot()
+    def updateFromNotice(self):
+        if self.update_prompt.demo:self.update_prompt.dismiss();self.requestSection.emit(9)
+        else:self.update_prompt.act()
     @Property('QVariantMap',notify=featureChanged)
     def features(self):return self.features_controller.snapshot()
     @Property('QVariantMap',notify=telemetryChanged)
@@ -448,6 +461,9 @@ class Bridge(QObject):
     def set_option(self,key,value):
         if key=='memo':self.setMemo(str(value));return
         self.store.data[key]=value
+        if key=='updatesAutoInstall':
+            if value:self.store.data['updatesAutoCheck']=True
+            self.update_prompt.configure()
         if key in ('wallpaperRotation','wallpaperSlides','backgroundMode'):self.set_slide_timer()
         self.changed()
     def set_autostart(self,enabled):

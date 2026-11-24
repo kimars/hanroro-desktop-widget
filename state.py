@@ -54,7 +54,7 @@ DEFAULT = {
     'tasks': [], 'selectedTask': -1, 'links': DEFAULT_LINKS, 'events': [], 'selectedTrack': 0, 'photoIndex': 0,
     'layoutRevision':4, 'layoutPreset':'left','hideDesktopIcons':True,'fontPreset':'round',
     'focusTimer':{'minutes':25,'phase':'focus','remaining':1500,'deadline':0,'finished':False,'alarmMode':'bell','alarmFile':'','alarmVolume':.65},
-    'decorations':[], 'audioReactive':True, 'updatesAutoCheck':True,
+    'decorations':[], 'audioReactive':True, 'updatesAutoCheck':True, 'updatesAutoInstall':False,
     'widgetColor':'','accentColor':'#86b8d6','widgetOpacity':.9,
 }
 
@@ -72,7 +72,7 @@ def validate(data):
         if data.get(key) in options: out[key] = 'image' if key=='backgroundMode' and data[key]=='room' else data[key]
     for key in ('background','imageBackground','videoBackground','screen','memo','mediaSource'):
         if isinstance(data.get(key),str): out[key] = data[key][:20000]
-    for key in ('motion','slideshow','wallpaperRotation','hideDesktopIcons','audioReactive','updatesAutoCheck'):
+    for key in ('motion','slideshow','wallpaperRotation','hideDesktopIcons','audioReactive','updatesAutoCheck','updatesAutoInstall'):
         if isinstance(data.get(key),bool): out[key] = data[key]
     for name,lo,hi,cast in [('fps',15,60,int),('photoInterval',5,3600,int),('volume',0,1,float),('widgetOpacity',.35,1,float),('dim',0,.85,float),('selectedTrack',0,10000,int),('photoIndex',0,10000,int)]:
         number(name,lo,hi,cast)

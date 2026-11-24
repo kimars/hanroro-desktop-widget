@@ -1,9 +1,5 @@
 name: Windows release
 on:
-  push:
-    paths:
-      - release_info.py
-      - .github/workflows/release.yml
   workflow_dispatch:
 env:
   PYTHONUTF8: '1'

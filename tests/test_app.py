@@ -244,3 +244,18 @@ def wait_for_saved_memo(bridge,expected):
         QTest.qWait(10);time.sleep(.005)
         if bridge.store.path.exists() and json.loads(bridge.store.path.read_text('utf-8'))['memo']==expected:return True
     return False
+
+def test_update_character_notice_is_above_widgets_and_clickable(program,monkeypatch):
+    from PySide6.QtCore import QPointF
+    p=program;b=p.bridge;view=p.preview;b.previewUpdateNotice();QTest.qWait(180)
+    notice=view.rootObject().findChild(QObject,'updateAnnouncement')
+    assert notice.property('visible') and notice.property('z')>10000
+    dismiss=view.rootObject().findChild(QObject,'noticeDismiss')
+    point=dismiss.mapToScene(QPointF(dismiss.width()/2,dismiss.height()/2)).toPoint()
+    QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(40)
+    assert not b.updateNotice['visible']
+    calls=[];monkeypatch.setattr(b.updates,'download',lambda:calls.append('download'))
+    b.updates.publish({'status':'available','version':'9.2.0'});QTest.qWait(180)
+    action=view.rootObject().findChild(QObject,'noticeUpdateNow');point=action.mapToScene(QPointF(action.width()/2,action.height()/2)).toPoint()
+    QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
+    assert calls==['download'] and not p.errors

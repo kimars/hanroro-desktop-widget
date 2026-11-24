@@ -28,6 +28,10 @@ Item {
             let top=it.mapToItem(scene,-10,-42),bottom=it.mapToItem(scene,it.width+16,it.height+14)
             regions.push({x:Math.floor(top.x),y:Math.floor(top.y),w:Math.ceil(bottom.x-top.x),h:Math.ceil(bottom.y-top.y)})
         }
+        if(updateAnnouncement.visible){
+            let bounds=updateAnnouncement.mapToItem(scene,Qt.rect(0,0,updateAnnouncement.width,updateAnnouncement.height))
+            regions.push({x:Math.floor(bounds.x),y:Math.floor(bounds.y),w:Math.ceil(bounds.width),h:Math.ceil(bounds.height)})
+        }
         for(let i=0;i<furniture.count;i++){
             let obj=furniture.itemAt(i)
             if(!obj||!obj.visible)continue
@@ -43,7 +47,7 @@ Item {
     Timer {id:regionThrottle;interval:64;onTriggered:scene.updateRegions()}
     function scheduleRegions(){if(scene.layerRole==="overlay"&&!regionThrottle.running)regionThrottle.start()}
     Timer {id:regionsSettled;interval:260;onTriggered:scene.updateRegions()}
-    Connections {target:bridge;function onStateChanged(){if(scene.layerRole==="overlay")regionsSettled.restart()} function onEditChanged(){if(scene.layerRole==="overlay")scene.updateRegions()} function onDecorationsChanged(){scene.scheduleRegions()} function onLayoutChanged(){scene.scheduleRegions()} function onDragActivity(){scene.scheduleRegions()}}
+    Connections {target:bridge;function onStateChanged(){if(scene.layerRole==="overlay")regionsSettled.restart()} function onEditChanged(){if(scene.layerRole==="overlay")scene.updateRegions()} function onDecorationsChanged(){scene.scheduleRegions()} function onLayoutChanged(){scene.scheduleRegions()} function onDragActivity(){scene.scheduleRegions()} function onUpdateNoticeChanged(){scene.scheduleRegions()}}
     Image {anchors.fill:parent;visible:scene.bg;source:s.wallpaperUrl;fillMode:Image.PreserveAspectCrop;mipmap:true;asynchronous:true}
     MediaPlayer {
         id:wallVideo;objectName:"wallpaperVideo";source:scene.bg&&s.backgroundMode==="video"?s.backgroundUrl:"";loops:MediaPlayer.Infinite
@@ -83,6 +87,7 @@ Item {
             }
         }
     }
+    UpdateAnnouncement {id:updateAnnouncement;anchors.left:parent.left;anchors.bottom:parent.bottom;anchors.leftMargin:16;anchors.bottomMargin:12;z:20000;visible:scene.fg&&bridge.updateNotice.visible}
     Rectangle {antialiasing:true;id:toastBox;visible:false;onVisibleChanged:if(scene.layerRole==="overlay")Qt.callLater(scene.updateRegions);z:10000;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:parent.bottom;anchors.bottomMargin:32;width:Math.min(680,toastText.implicitWidth+40);height:48;radius:16;color:"#ed232b2e"
         Text {id:toastText;anchors.centerIn:parent;width:Math.min(640,implicitWidth);elide:Text.ElideRight;color:"#f4f5f2";font.family:bridge.uiFont;font.weight:Font.Normal;font.pixelSize:13}
         Timer {id:toastTimer;interval:4000;onTriggered:toastBox.visible=false}
