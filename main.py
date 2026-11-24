@@ -32,13 +32,14 @@ configure_windows_fonts()
 
 # Qt uses Direct3D 11 on Windows. Set HANRORO_SOFTWARE=1 for a driver fallback.
 if os.environ.get('HANRORO_SOFTWARE')=='1':os.environ['QT_QUICK_BACKEND']='software'
-from PySide6.QtCore import Qt,QTimer,QUrl,QStandardPaths,QMetaObject
+from PySide6.QtCore import Qt,QTimer,QUrl,QStandardPaths,QMetaObject,QObject
 from PySide6.QtGui import QIcon,QFont,QFontDatabase,QColor,QSurfaceFormat,QAction,QRegion
 from PySide6.QtWidgets import QApplication,QSystemTrayIcon,QMenu,QMessageBox
 from PySide6.QtQuick import QQuickView
 from PySide6.QtNetwork import QLocalServer,QLocalSocket
 from state import Store
 from backend import Bridge
+from update_artwork import UpdateArtworkProvider
 from panels import Settings
 from native_jobs import NativeJobs
 from desktop_events import DesktopEventFilter
@@ -88,8 +89,16 @@ class Program:
             QTimer.singleShot(5000,self.auto_check_updates)
             self.update_timer=QTimer(self.app);self.update_timer.setInterval(6*60*60*1000);self.update_timer.timeout.connect(self.auto_check_updates);self.update_timer.start()
         if args.render:QTimer.singleShot(2300,self.render)
-        if args.smoke_run:QTimer.singleShot(2500,lambda:self.app.exit(1 if self.errors else 0))
+        if args.smoke_run:
+            self.bridge.previewUpdateNotice()
+            QTimer.singleShot(2500,self.finish_smoke)
         if self.store.load_warning:QTimer.singleShot(1200,lambda:self.bridge.toast.emit(self.store.load_warning))
+    def finish_smoke(self):
+        notice=self.preview.rootObject().findChild(QObject,'updateAnnouncement')
+        if notice is None or not notice.property('characterReady'):
+            self.errors.append('Update character did not load in the packaged application')
+        print('Packaged update character ready:',not bool(self.errors),flush=True)
+        self.app.exit(1 if self.errors else 0)
     def auto_check_updates(self):
         if self.store.data.get('updatesAutoCheck',True) or self.store.data.get('updatesAutoInstall',False):self.bridge.updates.check()
     def update_available(self,version):
@@ -104,6 +113,8 @@ class Program:
         if role=='overlay':v.setFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint)
         elif role=='background':v.setFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowDoesNotAcceptFocus)
         c=v.rootContext();c.setContextProperty('bridge',self.bridge);c.setContextProperty('uiFont',self.font('ui'));c.setContextProperty('handFont',self.font('hand'));c.setContextProperty('serifFont',self.font('serif'))
+        v._update_artwork=UpdateArtworkProvider(ROOT/'assets/ui/update-character.png')
+        v.engine().addImageProvider('updatecharacter',v._update_artwork)
         v.setInitialProperties({'layerRole':role})
         v.engine().warnings.connect(self.qml_warnings)
         v.setSource(QUrl.fromLocalFile(str(ROOT/'qml/Scene.qml')))

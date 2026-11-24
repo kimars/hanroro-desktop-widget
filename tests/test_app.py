@@ -259,3 +259,17 @@ def test_update_character_notice_is_above_widgets_and_clickable(program,monkeypa
     action=view.rootObject().findChild(QObject,'noticeUpdateNow');point=action.mapToScene(QPointF(action.width()/2,action.height()/2)).toPoint()
     QTest.mouseClick(view,Qt.LeftButton,Qt.NoModifier,point);QTest.qWait(30)
     assert calls==['download'] and not p.errors
+
+def test_update_character_has_its_own_desktop_paint_region(program):
+    from PySide6.QtCore import QPointF
+    p=program;b=p.bridge;view=p.preview;root=view.rootObject();b.previewUpdateNotice();QTest.qWait(520)
+    notice=root.findChild(QObject,'updateAnnouncement');character=root.findChild(QObject,'updateCharacter')
+    assert notice.property('characterReady') and character.implicitWidth()>0
+    masks=[];b.desktop=True;b.overlay=SimpleNamespace(setMask=lambda region:masks.append(region))
+    root.setProperty('layerRole','overlay');root.updateRegions()
+    # A decorative pixel left of all regular widgets must still be painted,
+    # without turning it into an invisible mouse-blocking rectangle.
+    point=character.mapToScene(QPointF(8,80)).toPoint()
+    assert masks[-1].contains(point) and not b._interactive_region.contains(point)
+    b.dismissUpdateNotice();root.updateRegions();assert not masks[-1].contains(point)
+    assert not p.errors

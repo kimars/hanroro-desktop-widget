@@ -29,8 +29,10 @@ Item {
             regions.push({x:Math.floor(top.x),y:Math.floor(top.y),w:Math.ceil(bottom.x-top.x),h:Math.ceil(bottom.y-top.y)})
         }
         if(updateAnnouncement.visible){
-            let bounds=updateAnnouncement.mapToItem(scene,Qt.rect(0,0,updateAnnouncement.width,updateAnnouncement.height))
-            regions.push({x:Math.floor(bounds.x),y:Math.floor(bounds.y),w:Math.ceil(bounds.width),h:Math.ceil(bounds.height)})
+            for(let entry of [{item:updateAnnouncement.characterItem,paintOnly:true},{item:updateAnnouncement.bubbleItem,paintOnly:false}]){
+                let top=entry.item.mapToItem(scene,-10,-10),bottom=entry.item.mapToItem(scene,entry.item.width+10,entry.item.height+18)
+                regions.push({x:Math.floor(top.x),y:Math.floor(top.y),w:Math.ceil(bottom.x)-Math.floor(top.x),h:Math.ceil(bottom.y)-Math.floor(top.y),paintOnly:entry.paintOnly})
+            }
         }
         for(let i=0;i<furniture.count;i++){
             let obj=furniture.itemAt(i)
@@ -87,7 +89,7 @@ Item {
             }
         }
     }
-    UpdateAnnouncement {id:updateAnnouncement;anchors.left:parent.left;anchors.bottom:parent.bottom;anchors.leftMargin:16;anchors.bottomMargin:12;z:20000;visible:scene.fg&&bridge.updateNotice.visible}
+    UpdateAnnouncement {id:updateAnnouncement;anchors.left:parent.left;anchors.bottom:parent.bottom;anchors.leftMargin:16;anchors.bottomMargin:12;z:20000;visible:scene.fg&&bridge.updateNotice.visible;onRegionChanged:scene.scheduleRegions()}
     Rectangle {antialiasing:true;id:toastBox;visible:false;onVisibleChanged:if(scene.layerRole==="overlay")Qt.callLater(scene.updateRegions);z:10000;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:parent.bottom;anchors.bottomMargin:32;width:Math.min(680,toastText.implicitWidth+40);height:48;radius:16;color:"#ed232b2e"
         Text {id:toastText;anchors.centerIn:parent;width:Math.min(640,implicitWidth);elide:Text.ElideRight;color:"#f4f5f2";font.family:bridge.uiFont;font.weight:Font.Normal;font.pixelSize:13}
         Timer {id:toastTimer;interval:4000;onTriggered:toastBox.visible=false}
