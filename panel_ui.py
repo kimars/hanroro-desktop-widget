@@ -99,7 +99,7 @@ class ToggleSwitch(QCheckBox):
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);p.setOpacity(1. if self.isEnabled() else .45)
         value=self._position;track=QColor('#739c86') if value>.5 else QColor('#d6e2da');p.setPen(Qt.PenStyle.NoPen);p.setBrush(track);p.drawRoundedRect(QRectF(0,7,40,24),12,12)
-        p.setBrush(QColor('white'));p.drawEllipse(QRectF(3+16*value,10,18,18));p.setPen(QColor('#597770'));p.drawText(QRectF(52,0,self.width()-52,38),Qt.AlignmentFlag.AlignVCenter,self.text())
+        p.setBrush(QColor('white'));p.drawEllipse(QRectF(3+16*value,10,18,18));p.setPen(self.palette().color(self.foregroundRole()));p.drawText(QRectF(52,0,self.width()-52,38),Qt.AlignmentFlag.AlignVCenter,self.text())
     def hitButton(self,pos):return self.rect().contains(pos)
 
 class NumberField(QLineEdit):
@@ -142,12 +142,12 @@ class Stepper(QWidget):
 class ShortcutDelegate(QStyledItemDelegate):
     def sizeHint(self,option,index):return QSize(210,68)
     def paint(self,p,option,index):
-        selected=bool(option.state&QStyle.StateFlag.State_Selected);hovered=bool(option.state&QStyle.StateFlag.State_MouseOver);p.save();p.setRenderHint(QPainter.RenderHint.Antialiasing);r=QRectF(option.rect).adjusted(1,2,-1,-2)
-        p.setPen(QPen(QColor('#bad5c4') if selected else QColor('#e7eee8')));p.setBrush(QColor('#e2eee5') if selected else QColor('#f6f9f5') if hovered else QColor('#ffffff'));p.drawRoundedRect(r,12,12)
+        dark=bool(self.parent().window().property('darkTheme'));selected=bool(option.state&QStyle.StateFlag.State_Selected);hovered=bool(option.state&QStyle.StateFlag.State_MouseOver);p.save();p.setRenderHint(QPainter.RenderHint.Antialiasing);r=QRectF(option.rect).adjusted(1,2,-1,-2)
+        p.setPen(QPen(QColor('#688f7d' if dark else '#bad5c4') if selected else QColor('#3a5148' if dark else '#e7eee8')));p.setBrush(QColor('#395b4d' if dark else '#e2eee5') if selected else QColor('#30483d' if dark else '#f6f9f5') if hovered else QColor('#263831' if dark else '#ffffff'));p.drawRoundedRect(r,12,12)
         tile=QRectF(r.x()+12,r.y()+13,36,36);p.setPen(Qt.PenStyle.NoPen);p.setBrush(QColor('#d6e8db') if selected else QColor('#e9f1e9'));p.drawRoundedRect(tile,10,10)
         value=index.data(Qt.ItemDataRole.DecorationRole)
         if value:value.paint(p,int(tile.x()+8),int(tile.y()+8),20,20)
-        font=QFont(option.font);font.setPixelSize(13);font.setBold(selected);p.setFont(font);p.setPen(QColor('#4a725b') if selected else QColor('#486454'));tx=r.x()+60;p.drawText(QRectF(tx,r.y()+10,r.width()-70,23),Qt.AlignmentFlag.AlignVCenter,p.fontMetrics().elidedText(index.data() or '',Qt.TextElideMode.ElideRight,int(r.width()-70)))
+        font=QFont(option.font);font.setPixelSize(13);font.setBold(selected);p.setFont(font);p.setPen(QColor('#e3f0e8' if dark else '#4a725b') if selected else QColor('#c1d7c8' if dark else '#486454'));tx=r.x()+60;p.drawText(QRectF(tx,r.y()+10,r.width()-70,23),Qt.AlignmentFlag.AlignVCenter,p.fontMetrics().elidedText(index.data() or '',Qt.TextElideMode.ElideRight,int(r.width()-70)))
         font.setPixelSize(10);font.setBold(False);p.setFont(font);p.setPen(QColor('#8da492'));p.drawText(QRectF(tx,r.y()+33,r.width()-70,18),Qt.AlignmentFlag.AlignVCenter,index.data(Qt.ItemDataRole.UserRole) or '');p.restore()
 
 def thumbnail(path):
@@ -232,16 +232,64 @@ class ColorPlane(QWidget):
 
 class PaletteDialog(QDialog):
     def __init__(self,color,parent=None,title='색상 선택'):
-        super().__init__(parent);from font_config import settings_font;self.setFont(settings_font());self.setWindowTitle(title);self.setStyleSheet(STYLE);self.setFixedSize(370,440);self.selected=QColor(color);v=QVBoxLayout(self);v.setContentsMargins(22,22,22,22);v.setSpacing(14);v.addWidget(label(title,'cardTitle'));grid=QGridLayout();grid.setSpacing(7)
-        self.plane=ColorPlane(color);self.hue=QSlider(Qt.Orientation.Vertical);self.hue.setRange(0,359);self.hue.setInvertedAppearance(True);self.hue.setValue(max(0,color.hsvHue()));self.hue.setFixedWidth(24)
-        self.hue.setStyleSheet('QSlider::groove:vertical {width:16px;border-radius:7px;background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 red,stop:.167 yellow,stop:.333 lime,stop:.5 cyan,stop:.667 blue,stop:.833 magenta,stop:1 red);} QSlider::handle:vertical {height:6px;margin:0 -3px;border:2px solid white;border-radius:3px;background:transparent;}')
-        self.hue.valueChanged.connect(self.plane.setHue);self.plane.colorChanged.connect(self.changed_color)
+        super().__init__(parent);from font_config import settings_font;self.setFont(settings_font());self.setWindowTitle(title);self.setStyleSheet(parent.styleSheet() if parent else STYLE);self.setFixedSize(370,540);self.selected=QColor(color);v=QVBoxLayout(self);v.setContentsMargins(22,22,22,22);v.setSpacing(14);v.addWidget(label(title,'cardTitle'));grid=QGridLayout();grid.setSpacing(7)
+        self.plane=ColorPlane(color);self.hue=HueWheel(max(0,color.hsvHue()));self.hue.hueChanged.connect(self.plane.setHue);self.plane.colorChanged.connect(self.changed_color)
         for i,value in enumerate(['#f2f7fb','#e1ece5','#dce9fa','#d8ece7','#fae2e5','#f8eaca','#ffffff','#c2b0e1','#95acd7','#89b7ad','#d3a3b4','#d2bd90','#263543','#39334c','#242436','#4f4370','#705d82','#a086d7']):
             b=QPushButton();b.setFixedSize(42,27);b.setStyleSheet(f'background:{value};border:1px solid #d2dfd7;border-radius:7px;');b.clicked.connect(lambda checked=False,c=value:self.select_swatch(QColor(c)));grid.addWidget(b,i//6,i%6)
-        v.addLayout(grid);field=QHBoxLayout();field.setSpacing(12);field.addWidget(self.plane,1);field.addWidget(self.hue);v.addLayout(field,1);self.preview=QFrame();self.preview.setFixedHeight(25);v.addWidget(self.preview)
+        v.addLayout(grid);field=QHBoxLayout();field.setSpacing(12);field.addWidget(self.plane,1);v.addWidget(self.hue);v.addLayout(field,1);self.preview=QFrame();self.preview.setFixedHeight(25);v.addWidget(self.preview)
         h=QHBoxLayout();cancel=QPushButton('취소');cancel.clicked.connect(self.reject);ok=QPushButton('선택');ok.setObjectName('primary');ok.clicked.connect(self.accept);h.addStretch();h.addWidget(cancel);h.addWidget(ok);v.addLayout(h);self.changed_color(color)
     def changed_color(self,color):self.selected=QColor(color);self.preview.setStyleSheet(f'background:{color.name()};border:1px solid #b6c9bd;border-radius:7px;')
-    def select_swatch(self,color):self.hue.blockSignals(True);self.hue.setValue(max(0,color.hsvHue()));self.hue.blockSignals(False);self.plane.setColor(color)
+    def select_swatch(self,color):self.hue.blockSignals(True);self.hue.hue=max(0,color.hsvHue());self.hue.update();self.hue.blockSignals(False);self.plane.setColor(color)
 
 def choose_color(color,parent,title):
     dialog=PaletteDialog(color,parent,title);return dialog.selected if dialog.exec() else QColor()
+
+DARK_OVERRIDES='''
+QWidget {color:#dae7e3;}
+QDialog#settingsWindow,QDialog {background:#182325;}
+QFrame#card {background:#223033;border-color:#344649;}
+QFrame#previewCard,QFrame#dropZone {background:#293a3c;border-color:#46615d;}
+QLabel#heading,QLabel#cardTitle {color:#e7f0ec;}
+QLabel#fieldLabel,QLabel#sub,QLabel#dropTitle {color:#a9c2b9;}
+QLineEdit,QPlainTextEdit,QComboBox,QSpinBox,QDoubleSpinBox {background:#1c292c;color:#dfebe5;border-color:#415854;selection-background-color:#527b70;selection-color:white;}
+QLineEdit:focus,QPlainTextEdit:focus,QComboBox:focus {background:#263638;border-color:#8eb9a6;}
+QComboBox QAbstractItemView {background:#223033;color:#dfebe5;selection-background-color:#44665d;selection-color:white;}
+QPushButton,QToolButton {background:#304440;color:#dfebe5;border-color:#48625a;}
+QPushButton:hover,QToolButton:hover {background:#405c51;color:white;}
+QPushButton:disabled {background:#273432;color:#83978f;}
+QPushButton#primary {background:#7fae9b;color:#152b25;border-color:#91bfad;}
+QPushButton#primary:hover {background:#9dc7b6;color:#152b25;}
+QPushButton#primary:disabled {background:#293e35;color:#849d90;border-color:#3f584c;}
+QPushButton[segment="true"] {color:#a6bbb3;background:transparent;}
+QPushButton[segment="true"]:checked {background:#46685c;color:white;}
+QListWidget::item {color:#bbcdc5;}
+QListWidget::item:selected,QTabBar::tab:selected {background:#3d5d51;color:#e5f1eb;}
+QLabel#statusPill {background:#365046;color:#c4dfd0;}
+QToolButton#iconChoice {background:#293c34;}
+QToolButton#iconChoice:checked {background:#527665;border-color:#a3c5b0;}
+QScrollBar::handle:vertical {background:#526b61;}
+'''
+def settings_style(dark=False):return STYLE+(DARK_OVERRIDES if dark else '')
+
+class HueWheel(QWidget):
+    hueChanged=Signal(int)
+    def __init__(self,hue=0,parent=None):
+        super().__init__(parent);self.hue=hue;self.setFixedHeight(126);self.setCursor(Qt.CursorShape.CrossCursor);self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    def setValue(self,value):self.hue=max(0,min(359,int(value)));self.update();self.hueChanged.emit(self.hue)
+    def paintEvent(self,event):
+        from PySide6.QtGui import QConicalGradient
+        import math
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);c=self.rect().center();g=QConicalGradient(c,0)
+        for i in range(13):g.setColorAt(i/12,QColor.fromHsv(round(i/12*359),255,255))
+        p.setPen(QPen(g,22));p.setBrush(Qt.BrushStyle.NoBrush);p.drawEllipse(c,48,48)
+        a=self.hue/359*math.tau;p.setPen(QPen(QColor('white'),3));p.drawEllipse(QRectF(c.x()+48*math.cos(a)-7,c.y()-48*math.sin(a)-7,14,14))
+    def pick(self,pos):
+        import math
+        c=self.rect().center();self.hue=round((math.atan2(c.y()-pos.y(),pos.x()-c.x())/math.tau%1)*359);self.update();self.hueChanged.emit(self.hue)
+    def mousePressEvent(self,e):
+        if e.button()==Qt.MouseButton.LeftButton:self.pick(e.position())
+    def mouseMoveEvent(self,e):
+        if e.buttons()&Qt.MouseButton.LeftButton:self.pick(e.position())
+    def keyPressEvent(self,e):
+        if e.key() in (Qt.Key.Key_Left,Qt.Key.Key_Right):self.hue=(self.hue+(1 if e.key()==Qt.Key.Key_Right else -1))%360;self.update();self.hueChanged.emit(self.hue)
+        else:super().keyPressEvent(e)

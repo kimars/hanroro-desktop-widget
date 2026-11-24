@@ -19,7 +19,7 @@ def panel(tmp_path):
     b=Bridge(Store(tmp_path),Path(__file__).resolve().parents[1]/'assets')
     p=Settings(b,app);p.resize(1220,840);p.show();QTest.qWait(30)
     yield p
-    b.persist();b.media.close();p.close();p.deleteLater();QTest.qWait(10)
+    b.persist();b.slides.stop();b.midnight.stop();b.debounce.stop();b.writer.close();b.media.close();b.weather_link.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();p.close();p.deleteLater();b.deleteLater();QTest.qWait(10)
 
 def test_shortcuts_modes_search_edit_and_save(panel):
     p=panel;p.show_section(4);assert not p.link_save.isEnabled()
@@ -125,3 +125,14 @@ def test_wallpaper_fill_and_fit_cover_full_desktop(tmp_path):
     assert fill.pixelColor(0,50).name()=='#ff0000' and fill.pixelColor(99,50).name()=='#ff0000'
     fit=QImage(str(render_wallpaper(path,tmp_path/'render',size=(100,100),fit='fit')))
     assert fit.pixelColor(50,50).name()=='#ff0000' and fit.pixelColor(50,0).name()!='#ff0000'
+
+
+def test_compact_navigation_reaches_secondary_pages_and_dark_mode(panel):
+    assert panel.nav.count()==6
+    for target in range(10):
+        panel.open_page(target);assert panel.stack.currentIndex()==target
+    panel.theme.setChecked(True)
+    assert panel.b.store.data['theme']=='night' and panel.property('darkTheme')
+    assert '#182325' in panel.styleSheet()
+    panel.theme.setChecked(False)
+    assert panel.b.store.data['theme']=='apricot' and not panel.property('darkTheme')

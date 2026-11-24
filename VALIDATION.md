@@ -59,3 +59,12 @@ Windows 실제 장치에서 재생 제어, 스피커 출력 캡처, GPU 및 체�
 - Windows 빌드 실행 검사에서도 알림을 표시하고 인물 이미지의 준비 상태를 확인합니다.
 
 - 최종 자동 검사 120개 통과.
+
+
+## 1.6.0
+- Full prior suite plus new weather/theme cases: 124 passed. Compact navigation/dark-mode UI test: 1 passed (125 total).
+- Weather location→forecast requests tested using deterministic responses, including direct-city override, rounded/invalid coordinates and WMO rain/snow/storm mappings.
+- Theme test verifies custom global/individual colors survive and default music card changes to dark.
+- QML scene rendered without errors; weather screenshot is a deterministic preview, not a live weather observation.
+- Closed all timers/services in settings fixture teardown: the old fixture left writer threads and Qt objects alive between tests.
+- Public network service availability and accuracy at the user's IP were not tested from the restricted build environment. Failures are surfaced in the UI and direct city selection is available.

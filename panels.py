@@ -11,10 +11,10 @@ from PySide6.QtWidgets import (QDialog,QHBoxLayout,QVBoxLayout,QFormLayout,QLabe
  QProgressBar,QFrame,QGridLayout,QToolButton,QSizePolicy,QListWidgetItem,QTabWidget,QStyleFactory,QApplication)
 from state import WIDGETS
 from font_config import settings_font
-from panel_ui import STYLE as PANEL_STYLE,ToggleSwitch,Stepper,AspectPreview,PhotoDelegate,ShortcutDelegate,UploadTile,card,label,icon,segment,thumbnail,choose_color
+from panel_ui import STYLE as PANEL_STYLE,ToggleSwitch,Stepper,AspectPreview,PhotoDelegate,ShortcutDelegate,UploadTile,card,label,icon,segment,thumbnail,choose_color,settings_style
 
 STYLE=PANEL_STYLE
-NAMES={'clock':'시계','photos':'사진','player':'음악','memo':'메모','calendar':'달력 · 일정','dock':'바로가기','visualizer':'오디오 비주얼라이저','system':'시스템 모니터','focus':'집중 타이머'}
+NAMES={'weather':'날씨 창문','clock':'시계','photos':'사진','player':'음악','memo':'메모','calendar':'달력 · 일정','dock':'바로가기','visualizer':'오디오 비주얼라이저','system':'시스템 모니터','focus':'집중 타이머'}
 
 def button(text,callback,primary=False):
     b=QPushButton(text);b.clicked.connect(callback)
@@ -80,21 +80,33 @@ class Settings(QDialog):
         root=QHBoxLayout(self);root.setContentsMargins(16,16,20,16);root.setSpacing(0)
         side=QFrame();side.setObjectName('sidebar');side.setFixedWidth(210);left=QVBoxLayout(side);left.setContentsMargins(15,24,15,18);left.setSpacing(14)
         self.nav=QListWidget();self.nav.setObjectName('navigation');self.nav.setIconSize(QSize(18,18));self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        for text,glyph in [('화면 설정','home'),('바탕화면 배경','image'),('위젯 꾸미기','settings'),('음악 앱','music'),('바로가기','app'),('메모 · 일정','calendar'),('데이터 보관','folder'),('집중 타이머','calendar'),('가구 · 사진','room'),('업데이트','download')]:self.nav.addItem(QListWidgetItem(icon(glyph,True),text))
+        for text,glyph in [('시작 · 화면','home'),('배경','image'),('위젯','settings'),('바로가기','app'),('가구 · 사진','room'),('업데이트','download')]:self.nav.addItem(QListWidgetItem(icon(glyph,True),text))
         left.addWidget(self.nav,1);root.addWidget(side)
         self.stack=QStackedWidget();root.addWidget(self.stack,1)
         self.general();self.media();self.layout_page();self.music();self.shortcuts();self.notes();self.backups();self.extras();self.room();self.update_page()
-        self.nav.currentRowChanged.connect(self.stack.setCurrentIndex);self.nav.setCurrentRow(0)
+        self.nav_routes=[0,1,2,4,8,9]
+        self.nav.currentRowChanged.connect(lambda i:self.stack.setCurrentIndex(self.nav_routes[i]) if i>=0 else None);self.nav.setCurrentRow(0)
+        self.b.stateChanged.connect(self.refresh_theme);self.refresh_theme()
+    def refresh_theme(self):
+        dark=self.b.store.data['theme']=='night'
+        if getattr(self,'_dark_style',None)!=dark:self._dark_style=dark;self.setProperty('darkTheme',dark);self.setStyleSheet(settings_style(dark));self.refresh_theme_icons(dark)
+    def refresh_theme_icons(self,dark):
+        if hasattr(self,'icon_buttons'):
+            for glyph,b in self.icon_buttons.items():b.setIcon(icon(glyph,dark))
+        if hasattr(self,'link_list'):self.link_list.viewport().update()
+    def open_page(self,index):
+        if index in self.nav_routes:self.nav.setCurrentRow(self.nav_routes.index(index))
+        self.stack.setCurrentIndex(index)
     def add(self,w):self.stack.addWidget(w)
     def general(self):
         d=self.b.store.data;w,v=page('화면','배경과 위젯의 표시 방식을 설정합니다. 변경 사항은 자동 저장됩니다.')
         form=QFormLayout();form.setSpacing(18)
-        self.theme=QComboBox();self.theme.addItems(['라이트','쿨','다크']);self.theme.setCurrentIndex(['apricot','ocean','night'].index(d['theme']))
-        self.theme.currentIndexChanged.connect(lambda i:self.b.set_option('theme',['apricot','ocean','night'][i]));form.addRow('분위기',self.theme)
+        self.theme=QCheckBox('다크 모드');self.theme.setChecked(d['theme']=='night');self.theme.toggled.connect(lambda active:self.b.set_option('theme','night' if active else 'apricot'));form.addRow(self.theme)
         self.mode=QComboBox();self.mode.addItems(['사진','영상']);self.mode.setCurrentIndex(1 if d['backgroundMode']=='video' else 0)
         self.mode.currentIndexChanged.connect(lambda i:self.b.set_option('backgroundMode',['image','video'][i]));form.addRow('배경',self.mode)
         screens=QComboBox();screens.addItems([s.name() for s in self.app.screens()]);idx=screens.findText(d['screen']);screens.setCurrentIndex(max(0,idx));screens.currentTextChanged.connect(self.change_screen);form.addRow('모니터',screens)
         dim=QSlider(Qt.Orientation.Horizontal);dim.setRange(0,85);dim.setValue(int(d['dim']*100));dim.valueChanged.connect(lambda n:self.b.set_option('dim',n/100));form.addRow('배경 어둡기',dim);v.addLayout(form)
+        quick=QHBoxLayout();quick.addWidget(button('음악 연결',lambda:self.open_page(3)));quick.addWidget(button('데이터 백업',lambda:self.open_page(6)));v.addLayout(quick)
         reactive=QCheckBox('오디오 비주얼라이저');reactive.setChecked(d['audioReactive']);reactive.toggled.connect(lambda value:self.b.set_option('audioReactive',value));v.addWidget(reactive)
         motion=QCheckBox('애니메이션');motion.setChecked(d['motion']);motion.toggled.connect(lambda x:self.b.set_option('motion',x));v.addWidget(motion)
         auto=QCheckBox('Windows에 로그인하면 자동 실행');auto.setChecked(self.b.autostart_enabled());auto.setEnabled(__import__('sys').platform=='win32');auto.toggled.connect(self.autostart);v.addWidget(auto)
@@ -202,17 +214,24 @@ class Settings(QDialog):
             self.b.set_option('backgroundMode','video' if video else 'image');self.mode.setCurrentIndex(1 if video else 0)
         except (OSError,ValueError) as e:QMessageBox.warning(self,'배경',str(e))
     def layout_page(self):
-        w,v=page('위젯','배치와 색상을 변경합니다. 각 위젯을 우클릭해도 색상을 바꿀 수 있습니다.')
-        row=QHBoxLayout();presets=QComboBox();presets.addItems(['왼쪽','오른쪽','하단']);presets.setCurrentIndex(['left','right','bottom'].index(self.b.store.data['layoutPreset']));presets.currentIndexChanged.connect(lambda i:self.b.applyLayout(['left','right','bottom'][i]));row.addWidget(presets);row.addWidget(button('배치 편집',self.b.toggleEdit,True));v.addLayout(row)
-        colors=QHBoxLayout();colors.addWidget(button('전체 위젯 색상',self.global_color));colors.addWidget(button('강조 색상',self.accent_color));colors.addWidget(button('기본 색상',self.reset_colors));v.addLayout(colors)
-        opacity=QSlider(Qt.Orientation.Horizontal);opacity.setRange(35,100);opacity.setValue(round(self.b.store.data['widgetOpacity']*100));opacity.valueChanged.connect(lambda n:self.b.set_option('widgetOpacity',n/100));form2=QFormLayout();form2.addRow('불투명도',opacity);v.addLayout(form2)
-        form=QFormLayout();self.widget_checks={};self.widget_spins={};self.color_buttons={}
+        w,v=page('위젯',scroll=False);tabs=QTabWidget();v.addWidget(tabs,1)
+        display=QWidget();dv=QVBoxLayout(display);dv.setContentsMargins(4,8,4,8);dv.setSpacing(14)
+        row=QHBoxLayout();presets=QComboBox();presets.addItems(['왼쪽','오른쪽','하단']);presets.setCurrentIndex(['left','right','bottom'].index(self.b.store.data['layoutPreset']));presets.currentIndexChanged.connect(lambda i:self.b.applyLayout(['left','right','bottom'][i]));row.addWidget(presets);row.addWidget(button('바탕화면에서 배치',self.b.toggleEdit,True));dv.addLayout(row)
+        form=QFormLayout();form.setSpacing(12);self.widget_checks={};self.widget_spins={};self.color_buttons={}
         for key in WIDGETS:
-            if key in ('photos','visualizer'):continue
-            check=QCheckBox('표시');check.setChecked(self.b.store.data['widgets'][key]['visible']);check.toggled.connect(lambda value,k=key:self.visibility(k,value));self.widget_checks[key]=check
-            row=QHBoxLayout();row.addWidget(check);spin=Stepper();spin.setRange(.45,1.8);spin.setSingleStep(.05);spin.setDecimals(2);spin.setValue(self.b.store.data['widgets'][key]['scale']);self.widget_spins[key]=spin;spin.valueChanged.connect(lambda value,k=key:self.b.scaleWidget(k,value));row.addWidget(spin)
-            swatch=button('색상',lambda _,k=key:self.widget_color(k));self.color_buttons[key]=swatch;row.addWidget(swatch);form.addRow(NAMES[key],row)
-        v.addLayout(form);v.addStretch();v.addWidget(button('처음 배치로 되돌리기',self.reset_layout));self.add(w)
+            if key in ('photos','visualizer','weather'):continue
+            check=QCheckBox(NAMES[key]);check.setChecked(self.b.store.data['widgets'][key]['visible']);check.toggled.connect(lambda value,k=key:self.visibility(k,value));self.widget_checks[key]=check
+            row=QHBoxLayout();row.addWidget(check,1);spin=Stepper();spin.setRange(.45,1.8);spin.setSingleStep(.05);spin.setDecimals(2);spin.setValue(self.b.store.data['widgets'][key]['scale']);self.widget_spins[key]=spin;spin.valueChanged.connect(lambda value,k=key:self.b.scaleWidget(k,value));row.addWidget(spin)
+            swatch=button('색',lambda _,k=key:self.widget_color(k));self.color_buttons[key]=swatch;row.addWidget(swatch);form.addRow(row)
+        dv.addLayout(form);more=QHBoxLayout();more.addWidget(button('음악 연결',lambda:self.open_page(3)));more.addWidget(button('메모 · 일정',lambda:self.open_page(5)));more.addWidget(button('집중 타이머',lambda:self.open_page(7)));dv.addLayout(more);dv.addStretch();dv.addWidget(button('배치 초기화',self.reset_layout));tabs.addTab(display,'표시 · 배치')
+        colors=QWidget();cv=QVBoxLayout(colors);cv.setSpacing(16);cv.addWidget(button('전체 위젯 색',self.global_color));cv.addWidget(button('강조 색',self.accent_color));opacity=QSlider(Qt.Orientation.Horizontal);opacity.setRange(35,100);opacity.setValue(round(self.b.store.data['widgetOpacity']*100));opacity.valueChanged.connect(lambda n:self.b.set_option('widgetOpacity',n/100));cv.addWidget(label('불투명도'));cv.addWidget(opacity);cv.addWidget(button('기본 색으로 복원',self.reset_colors));cv.addStretch();tabs.addTab(colors,'색상')
+        weather_box,wv=card('밤과 날씨');lighting=QCheckBox('밤 조명');lighting.setChecked(self.b.store.data['nightLighting']);lighting.toggled.connect(lambda enabled:self.b.set_option('nightLighting',enabled));wv.addWidget(lighting)
+        weather=QCheckBox('날씨 창문');weather.setChecked(self.b.store.data['widgets']['weather']['visible']);weather.toggled.connect(lambda active:self.visibility('weather',active));wv.addWidget(weather)
+        self.weather_city=QLineEdit(self.b.store.data['weatherCity']);self.weather_city.setPlaceholderText('자동 위치 · 직접 지정하려면 도시 입력');cityrow=QHBoxLayout();cityrow.addWidget(self.weather_city,1);cityrow.addWidget(button('적용',lambda:self.b.set_option('weatherCity',self.weather_city.text().strip()[:80])));wv.addLayout(cityrow)
+        wv.addWidget(label('자동 위치는 IP 기준 · Open-Meteo 날씨','sub'));self.weather_status=label('','sub');self.weather_status.setWordWrap(True);wv.addWidget(self.weather_status);self.b.weatherChanged.connect(self.refresh_weather);wv.addWidget(button('날씨 새로고침',self.b.refreshWeather));wv.addStretch();tabs.addTab(weather_box,'밤 · 날씨');self.add(w)
+    def refresh_weather(self):
+        d=self.b.weather
+        self.weather_status.setText((d['city']+' · '+d['updated']) if d['status']=='ready' else {'error':'날씨 연결 실패 · 도시를 직접 지정하거나 다시 시도','loading':'날씨 확인 중','off':''}.get(d['status'],''))
     def global_color(self):
         color=choose_color(QColor(self.b.store.data['widgetColor'] or '#f2f7fb'),self,'위젯 색상')
         if color.isValid():self.b.set_option('widgetColor',color.name())
@@ -269,13 +288,14 @@ class Settings(QDialog):
         self.link_list=QListWidget();self.link_list.setItemDelegate(ShortcutDelegate(self.link_list));self.link_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);self.link_list.setMouseTracking(True);lv.addWidget(self.link_list,1)
         moves=QHBoxLayout();moves.addWidget(button('↑',lambda:self.reorder_link(-1)));moves.addWidget(button('↓',lambda:self.reorder_link(1)));moves.addStretch();delete=button('삭제',self.delete_link);delete.setObjectName('danger');moves.addWidget(delete);lv.addLayout(moves);columns.addWidget(library,1)
         editor_widget=QWidget();ev=QVBoxLayout(editor_widget);ev.setContentsMargins(0,0,0,0);ev.setSpacing(12)
-        preview,pv=card();preview.setObjectName('previewCard');preview.setFixedHeight(86);pr=QHBoxLayout();self.link_preview_icon=QLabel();self.link_preview_icon.setFixedSize(44,44);self.link_preview_icon.setAlignment(Qt.AlignmentFlag.AlignCenter);self.link_preview_icon.setStyleSheet('background:#dce9e1;border-radius:13px;');pr.addWidget(self.link_preview_icon);text=QVBoxLayout();text.setSpacing(4);self.link_preview_title=label('새 버튼','cardTitle');self.link_preview_type=label('','sub');text.addWidget(self.link_preview_title);text.addWidget(self.link_preview_type);pr.addLayout(text,1);pv.addLayout(pr);ev.addWidget(preview)
+        self.link_preview_icon=QLabel(self);self.link_preview_title=QLabel(self);self.link_preview_type=QLabel(self)
+        for hidden in (self.link_preview_icon,self.link_preview_title,self.link_preview_type):hidden.hide()
         content=QWidget();cv=QVBoxLayout(content);cv.setContentsMargins(0,0,0,0);cv.setSpacing(12)
         identity,iv=card('이름과 연결');self.link_title=QLineEdit();self.link_title.setPlaceholderText('버튼 이름');iv.addWidget(self.link_title)
         self.link_mode=segment(['앱','웹사이트','파일 · 폴더','기능'],self.switch_link_mode);iv.addWidget(self.link_mode)
         self.link_target=QLineEdit();self.link_target.setPlaceholderText('https://example.com');iv.addWidget(self.link_target)
         self.target_stack=QStackedWidget()
-        apps=QWidget();av=QVBoxLayout(apps);av.setContentsMargins(0,0,0,0);av.setSpacing(8);av.addWidget(button('설치된 앱에서 선택',self.pick_app,True));av.addWidget(FileDropZone('앱 파일 놓기','EXE · LNK',self.set_link_paths,{'.exe','.lnk'}));self.target_stack.addWidget(apps)
+        apps=QWidget();av=QVBoxLayout(apps);av.setContentsMargins(0,0,0,0);av.setSpacing(8);av.addWidget(button('설치된 앱에서 선택',self.pick_app,True));app_drop=FileDropZone('앱 파일 놓기','EXE · LNK',self.set_link_paths,{'.exe','.lnk'});app_drop.setMinimumHeight(58);av.addWidget(app_drop);self.target_stack.addWidget(apps)
         web=QWidget();self.target_stack.addWidget(web)
         files=QWidget();fv=QVBoxLayout(files);fv.setContentsMargins(0,0,0,0);fr=QHBoxLayout();fr.addWidget(button('파일 선택',self.browse_link));fr.addWidget(button('폴더 선택',self.browse_folder));fv.addLayout(fr);fv.addWidget(FileDropZone('파일 놓기','파일을 놓거나 눌러서 선택',self.set_link_paths,set()));self.target_stack.addWidget(files)
         funcs=QWidget();fun=QVBoxLayout(funcs);fun.setContentsMargins(0,0,0,0);self.action_combo=QComboBox();self.action_combo.addItem('기능 선택…','')
@@ -284,7 +304,7 @@ class Settings(QDialog):
         looks,look=card('아이콘');self.link_glyph=QComboBox();glyphs=['home','camera','folder','music','globe','play','star','app','download','calendar','image','edit','plus','settings','trash'];self.link_glyph.addItems(glyphs);self.link_glyph.hide();self.link_icon='';self.icon_name=label('기본 아이콘','sub');self.icon_buttons={};grid=QGridLayout();grid.setSpacing(7)
         for i,glyph in enumerate(glyphs):
             b=QToolButton();b.setObjectName('iconChoice');b.setCheckable(True);b.setAutoExclusive(True);b.setFixedSize(36,36);b.setIcon(icon(glyph));b.setIconSize(QSize(19,19));b.setToolTip(glyph);b.clicked.connect(lambda checked=False,g=glyph:self.link_glyph.setCurrentText(g));self.icon_buttons[glyph]=b;grid.addWidget(b,i//7,i%7)
-        look.addLayout(grid);ir=QHBoxLayout();ir.addWidget(self.icon_name,1);ir.addWidget(button('이미지로 변경',self.browse_icon));look.addLayout(ir);look.addWidget(FileDropZone('아이콘 이미지 놓기','PNG · JPG · SVG · ICO',self.set_icon_paths,{'.png','.jpg','.jpeg','.webp','.svg','.ico'}));cv.addWidget(looks);cv.addStretch()
+        look.addLayout(grid);ir=QHBoxLayout();ir.addWidget(self.icon_name,1);ir.addWidget(button('이미지로 변경',self.browse_icon));look.addLayout(ir);cv.addWidget(looks);cv.addStretch()
         form=QScrollArea();form.setFrameShape(QFrame.Shape.NoFrame);form.setWidgetResizable(True);form.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);form.setWidget(content);ev.addWidget(form,1)
         footer=QHBoxLayout();self.link_feedback=label('','sub');footer.addWidget(self.link_feedback,1);self.link_save=button('새 버튼 추가',self.submit_link,True);footer.addWidget(self.link_save);ev.addLayout(footer);columns.addWidget(editor_widget,2);v.addLayout(columns,1)
         self.link_glyph.currentTextChanged.connect(self.reset_link_icon);self.link_title.textChanged.connect(self.update_link_preview);self.link_target.textChanged.connect(self.update_link_preview);self.link_list.currentRowChanged.connect(self.select_link);self.refresh_links();self.new_link();self.add(w)
@@ -579,4 +599,4 @@ class Settings(QDialog):
             spin=self.widget_spins[key];spin.blockSignals(True);spin.setValue(self.b.store.data['widgets'][key]['scale']);spin.blockSignals(False)
         self.refresh_wallpaper_preview();self.refresh_room()
         if index==7:self.extras_tabs.setCurrentIndex(0)
-        self.nav.setCurrentRow(index);self.show();self.raise_();self.activateWindow()
+        self.open_page(index);self.show();self.raise_();self.activateWindow()

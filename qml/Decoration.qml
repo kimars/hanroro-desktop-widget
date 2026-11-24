@@ -17,6 +17,10 @@ Item {
     z:(editing&&selected)?300:item.z
     onXChanged:if(dragger.drag.active)regionChanged()
     onYChanged:if(dragger.drag.active)regionChanged()
+    Canvas {anchors.fill:parent;z:-1;visible:bridge.state.nightLighting&&(["lamp","pendant","candle","string_lights"].indexOf(root.item.kind)>=0);opacity:scene.nightActive?1:0
+        onPaint:{let c=getContext("2d");c.clearRect(0,0,width,height);let r=Math.min(width,height)/2,g=c.createRadialGradient(width/2,height/2,0,width/2,height/2,r);g.addColorStop(0,"#88ffd794");g.addColorStop(1,"#00ffd794");c.fillStyle=g;c.fillRect(0,0,width,height)}
+        Behavior on opacity {NumberAnimation {duration:900}}
+    }
     Item {anchors.fill:parent
         transform:Scale {origin.x:root.width/2;xScale:root.item.flipped?-1:1}
         Image {anchors.fill:parent;visible:root.item.kind!=="photo";source:visible?bridge.state.assetUrl+"furniture/"+root.item.kind+(root.item.motion?"-base":"")+".svg":"";sourceSize.width:root.width*2;sourceSize.height:root.height*2;asynchronous:true;mipmap:true;fillMode:Image.PreserveAspectFit}

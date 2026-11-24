@@ -249,7 +249,7 @@ class Program:
         if self._shutting_down:return
         self._shutting_down=True;logging.info('Shutdown started')
         self.wallpaper_jobs.cancel()
-        self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.update_prompt.close();self.bridge.updates.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()
+        self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.update_prompt.close();self.bridge.updates.close();self.bridge.weather_link.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()
         for view in self.bridge.views:
             view.hide();view.setSource(QUrl())
         if self.tray:self.tray.hide()
