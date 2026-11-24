@@ -4,7 +4,7 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date,datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from PySide6.QtCore import QObject,Property,Signal,Slot,QTimer,QUrl,QStandardPaths
@@ -34,7 +34,7 @@ class Bridge(QObject):
     memoChanged=Signal();inputChanged=Signal();memoInputRequested=Signal();editChanged=Signal();toast=Signal(str);requestRestore=Signal();requestSection=Signal(int);requestShowDesktop=Signal();requestSettings=Signal();requestMemo=Signal();requestEvents=Signal();requestDesktop=Signal();requestPreview=Signal()
     def __init__(self,store,assets):
         super().__init__();self.store=store;self.assets=Path(assets);self.views=[];self.overlay=None;self.desktop=False
-        self.weather_link=WeatherLink(self);self.weather_link.changed.connect(self.weatherChanged)
+        self.weather_link=WeatherLink(self);self.weather_link.changed.connect(self.weatherChanged);self.weather_link.changed.connect(self.refresh_state)
         self.stateChanged.connect(self.sync_weather);QTimer.singleShot(0,self.sync_weather)
         self._state_cache=None;self._wallpaper_cache_key=None;self._wallpaper_cache_path=None;self._region_key=None;self._interactive_region=QRegion()
         self._input=False;self._edit=False;self._paused=False;self._settings=None;self.wallpaper_size=(1920,1080)
@@ -385,12 +385,16 @@ class Bridge(QObject):
     def videoError(self,code,message):
         log.error('Video background error %s: %s; file=%s',code,message,self.store.data['videoBackground'])
         self.toast.emit('영상 재생 실패: '+str(message)[:140])
+    def night_active(self):
+        if not self.store.data.get('nightLighting'):return False
+        weather=self.weather_link.data
+        return not weather['isDay'] if weather['status']=='ready' else datetime.now().hour>=19 or datetime.now().hour<7
     def wallpaper_path(self):
-        d=self.store.data;source=self.active_wallpaper()
-        key=(source,d['theme'],d['dim'],self.wallpaper_size,d.get('wallpaperFit','fill'))
+        d=self.store.data;source=self.active_wallpaper();dim=min(.85,1-(1-d['dim'])*(1-(.22 if self.night_active() else 0)))
+        key=(source,d['theme'],dim,self.wallpaper_size,d.get('wallpaperFit','fill'))
         if key==self._wallpaper_cache_key:return self._wallpaper_cache_path
         if not Path(source).is_file():source=str(self.assets/'photos/photo1.jpg')
-        path=render_wallpaper(source,self.store.directory/'wallpapers',d['theme'],d['dim'],self.wallpaper_size,d.get('wallpaperFit','fill'))
+        path=render_wallpaper(source,self.store.directory/'wallpapers',d['theme'],dim,self.wallpaper_size,d.get('wallpaperFit','fill'))
         self._wallpaper_cache_key=key;self._wallpaper_cache_path=path
         return path
     @Slot()

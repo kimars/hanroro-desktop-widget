@@ -63,7 +63,7 @@ Item {
     Rectangle {anchors.fill:parent;visible:videoOutput.visible;color:"black";opacity:s.dim}
     onSurfaceActiveChanged:{if(surfaceActive&&!bridge.backgroundPaused&&wallVideo.source.toString()!=='')wallVideo.play();else wallVideo.pause()}
     Connections {target:bridge;function onPausedChanged(){if(!bridge.backgroundPaused&&scene.surfaceActive&&wallVideo.source.toString()!=='')wallVideo.play();else wallVideo.pause()}}
-    Rectangle {anchors.fill:parent;visible:scene.bg;color:"#102235";opacity:scene.nightActive?.22:0;Behavior on opacity {NumberAnimation {duration:900}}}
+    Rectangle {anchors.fill:parent;visible:scene.bg&&videoOutput.visible;color:"#102235";opacity:scene.nightActive?.22:0;Behavior on opacity {NumberAnimation {duration:900}}}
     Item {
         id:world;width:1600;height:900;scale:scene.roomScale;anchors.centerIn:parent
         Repeater {id:furniture;model:scene.fg?bridge.decorationModel:null

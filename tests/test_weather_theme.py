@@ -48,3 +48,21 @@ def test_palette_wheel_has_no_slider_and_mouse_changes_hue(qt_application):
     QTest.mouseClick(d.hue,Qt.LeftButton,pos=QPoint(d.hue.width()//2+48,d.hue.height()//2))
     assert d.plane.hue<10 or d.plane.hue>350
     d.close();d.deleteLater();QTest.qWait(10)
+
+
+def test_native_photo_night_dim_changes_file_and_restores_day(tmp_path,qt_application):
+    from pathlib import Path
+    from PySide6.QtGui import QImage
+    from backend import Bridge
+    source=tmp_path/'white.png';image=QImage(24,24,QImage.Format_RGB32);image.fill(QColor('white'));image.save(str(source))
+    b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');b.wallpaper_size=(24,24)
+    try:
+        b.store.data.update(backgroundMode='image',imageBackground=str(source),background=str(source),dim=0,nightLighting=True)
+        b.weather_link.data.update(status='ready',isDay=False)
+        night=b.wallpaper_path();assert QImage(str(night)).pixelColor(12,12).red()<210
+        b.weather_link.data.update(isDay=True)
+        day=b.wallpaper_path();assert day!=night and QImage(str(day)).pixelColor(12,12).red()==255
+        b.store.data['nightLighting']=False;b.weather_link.data['isDay']=False
+        assert b.wallpaper_path()==day
+    finally:
+        b.slides.stop();b.midnight.stop();b.debounce.stop();b.writer.close();b.media.close();b.weather_link.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();b.deleteLater();QTest.qWait(10)

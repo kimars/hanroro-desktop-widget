@@ -62,9 +62,11 @@ Windows 실제 장치에서 재생 제어, 스피커 출력 캡처, GPU 및 체�
 
 
 ## 1.6.0
-- Full prior suite plus new weather/theme cases: 124 passed. Compact navigation/dark-mode UI test: 1 passed (125 total).
+- Full prior suite plus new weather/theme cases: 124 passed. Compact navigation/dark-mode UI test: 1 passed (125 total); native photo night/day pixel regression adds one case (126 total).
 - Weather location→forecast requests tested using deterministic responses, including direct-city override, rounded/invalid coordinates and WMO rain/snow/storm mappings.
 - Theme test verifies custom global/individual colors survive and default music card changes to dark.
 - QML scene rendered without errors; weather screenshot is a deterministic preview, not a live weather observation.
 - Closed all timers/services in settings fixture teardown: the old fixture left writer threads and Qt objects alive between tests.
 - Public network service availability and accuracy at the user's IP were not tested from the restricted build environment. Failures are surfaced in the UI and direct city selection is available.
+
+- Night dim is rendered into the Windows photo wallpaper and refreshes on weather/day transition; video uses its background layer. Regression checks dimmed pixels, distinct cache file, and day restoration.
