@@ -6,6 +6,8 @@ WORK=ROOT/'build-ci';RUNTIME=WORK/'python';PAYLOAD=WORK/'HanroroWidget'
 if sys.platform!='win32':raise SystemExit('Windows build required')
 required=[ROOT/'assets/ui/update-character.png',ROOT/'assets/loop.mp4',*[ROOT/'assets/photos'/('photo'+str(i)+'.jpg') for i in [1,2,3,4,6]]]
 if not all(p.is_file() for p in required):raise SystemExit('Bundled photo/video assets are missing.')
+from verify_assets import verify
+print('Verified source asset hashes:',verify(ROOT/'assets'),flush=True)
 WORK.mkdir(exist_ok=True);RUNTIME.mkdir(exist_ok=True)
 archive=WORK/'python-embed.zip'
 urllib.request.urlretrieve('https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip',archive)

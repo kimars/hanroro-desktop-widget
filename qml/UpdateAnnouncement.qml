@@ -20,7 +20,7 @@ Item {
         id:content;anchors.fill:parent
         transform:Translate {y:(1-root.entrance)*48}
         opacity:root.entrance
-        Image {id:character;objectName:"updateCharacter";x:0;y:65;width:226;height:290;source:"image://updatecharacter/character";sourceSize.width:452;fillMode:Image.PreserveAspectFit;asynchronous:false;mipmap:true;onStatusChanged:root.regionChanged()}
+        Image {id:character;objectName:"updateCharacter";x:0;y:65;width:226;height:290;source:bridge.state.assetUrl+"ui/update-character.png";sourceSize.width:452;fillMode:Image.PreserveAspectFit;asynchronous:true;mipmap:true;onStatusChanged:root.regionChanged()}
         Rectangle {
             id:bubble;objectName:"updateBubble";x:162;y:14;width:320;height:198;radius:22
             color:"#fffdf8";border.color:"#dce4de";border.width:1

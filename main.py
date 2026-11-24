@@ -39,7 +39,6 @@ from PySide6.QtQuick import QQuickView
 from PySide6.QtNetwork import QLocalServer,QLocalSocket
 from state import Store
 from backend import Bridge
-from update_artwork import UpdateArtworkProvider
 from panels import Settings
 from native_jobs import NativeJobs
 from desktop_events import DesktopEventFilter
@@ -113,8 +112,6 @@ class Program:
         if role=='overlay':v.setFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint)
         elif role=='background':v.setFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowDoesNotAcceptFocus)
         c=v.rootContext();c.setContextProperty('bridge',self.bridge);c.setContextProperty('uiFont',self.font('ui'));c.setContextProperty('handFont',self.font('hand'));c.setContextProperty('serifFont',self.font('serif'))
-        v._update_artwork=UpdateArtworkProvider(ROOT/'assets/ui/update-character.png')
-        v.engine().addImageProvider('updatecharacter',v._update_artwork)
         v.setInitialProperties({'layerRole':role})
         v.engine().warnings.connect(self.qml_warnings)
         v.setSource(QUrl.fromLocalFile(str(ROOT/'qml/Scene.qml')))
