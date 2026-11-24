@@ -70,3 +70,9 @@ Windows 실제 장치에서 재생 제어, 스피커 출력 캡처, GPU 및 체�
 - Public network service availability and accuracy at the user's IP were not tested from the restricted build environment. Failures are surfaced in the UI and direct city selection is available.
 
 - Night dim is rendered into the Windows photo wallpaper and refreshes on weather/day transition; video uses its background layer. Regression checks dimmed pixels, distinct cache file, and day restoration.
+
+
+## 1.6.1
+- Fix six-hour background interval to 60 seconds, using public HEAD redirect probes and verified REST metadata only for a newer version.
+- Added HEAD preservation through redirects, no REST lookup for current version, cross-repository redirect rejection, subprocess probe → desktop prompt integration without settings, and quiet retry/backoff tests.
+- Existing install/download hash and trusted-host checks remain in place. Old clients retain their previous schedule until this version is installed.

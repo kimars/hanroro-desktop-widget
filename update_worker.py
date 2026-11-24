@@ -22,7 +22,9 @@ def trusted_url(url):
 class SecureRedirect(HTTPRedirectHandler):
     def redirect_request(self,request,fp,code,msg,headers,newurl):
         trusted_url(newurl)
-        return super().redirect_request(request,fp,code,msg,headers,newurl)
+        result=super().redirect_request(request,fp,code,msg,headers,newurl)
+        if result is not None and request.get_method()=='HEAD':result.method='HEAD'
+        return result
 
 def open_url(url):
     trusted_url(url)
@@ -33,6 +35,22 @@ def limited_read(url,limit):
         data=response.read(limit+1)
     if len(data)>limit:raise ValueError('업데이트 응답이 너무 큽니다.')
     return data
+
+def probe(repository,current):
+    """Read the public latest-release redirect, avoiding one REST request per poll."""
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):raise ValueError('업데이트 저장소가 설정되지 않았습니다.')
+    url='https://github.com/'+repository+'/releases/latest'
+    request=Request(url,method='HEAD',headers={'User-Agent':'HanroroDesktopWidget-Updater','Cache-Control':'no-cache'})
+    try:
+        with build_opener(SecureRedirect()).open(request,timeout=15) as response:final=response.geturl()
+    except HTTPError as error:
+        if error.code==404:return {'status':'unchanged'}
+        raise
+    trusted_url(final);parsed=urlsplit(final);prefix='/'+repository+'/releases/tag/'
+    if parsed.hostname!='github.com' or not parsed.path.startswith(prefix):raise ValueError('배포 주소를 확인할 수 없습니다.')
+    version=parsed.path[len(prefix):]
+    if version_tuple(version)<=version_tuple(current):return {'status':'unchanged'}
+    return release_info(repository,current)
 
 def release_info(repository,current):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):raise ValueError('업데이트 저장소가 설정되지 않았습니다.')
@@ -92,7 +110,8 @@ def run():
     def emit(data):out.write(json.dumps(data,ensure_ascii=True)+'\n');out.flush()
     try:
         request=json.loads(stdio('stdin',-10).readline(8192))
-        if request['action']=='check':result=release_info(request['repository'],request['current'])
+        if request['action']=='probe':result=probe(request['repository'],request['current'])
+        elif request['action']=='check':result=release_info(request['repository'],request['current'])
         elif request['action']=='download':result=download(request['repository'],request['current'],request['directory'],emit)
         else:raise ValueError('알 수 없는 업데이트 요청입니다.')
         emit(result);return 0

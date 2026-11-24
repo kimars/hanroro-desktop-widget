@@ -76,3 +76,73 @@ def test_update_settings_and_restart_switch(tmp_path):
         assert '/AUTOUPDATE' in source and 'Function .onInstSuccess' in source
     finally:
         b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.writer.close();p.close();p.deleteLater()
+
+
+def test_probe_uses_head_and_skips_rest_when_version_is_current(monkeypatch):
+    from contextlib import contextmanager
+    calls=[]
+    class Response:
+        def geturl(self):return 'https://github.com/kimars/hanroro-desktop-widget/releases/tag/v'+VERSION
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+    class Opener:
+        def open(self,request,timeout):calls.append((request.get_method(),request.full_url));return Response()
+    monkeypatch.setattr(worker,'build_opener',lambda *a:Opener())
+    monkeypatch.setattr(worker,'release_info',lambda *a:pytest.fail('No REST call for same version'))
+    assert worker.probe('kimars/hanroro-desktop-widget',VERSION)=={'status':'unchanged'}
+    assert calls==[('HEAD','https://github.com/kimars/hanroro-desktop-widget/releases/latest')]
+
+
+def test_probe_new_release_fetches_verified_metadata_and_rejects_other_repo(monkeypatch):
+    final=['https://github.com/kimars/hanroro-desktop-widget/releases/tag/v9.1.0']
+    class Response:
+        def geturl(self):return final[0]
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+    class Opener:
+        def open(self,*a,**kw):return Response()
+    monkeypatch.setattr(worker,'build_opener',lambda *a:Opener())
+    monkeypatch.setattr(worker,'limited_read',lambda *a:json.dumps(release()).encode())
+    assert worker.probe('kimars/hanroro-desktop-widget',VERSION)['status']=='available'
+    final[0]='https://github.com/other/repo/releases/tag/v9.1.0'
+    with pytest.raises(ValueError):worker.probe('kimars/hanroro-desktop-widget',VERSION)
+    req=worker.Request('https://github.com/kimars/hanroro-desktop-widget/releases/latest',method='HEAD')
+    redirected=worker.SecureRedirect().redirect_request(req,None,302,'Found',{},'https://github.com/kimars/hanroro-desktop-widget/releases/tag/v9.1.0')
+    assert redirected.get_method()=='HEAD'
+
+
+def test_background_probe_shows_desktop_notice_without_settings(tmp_path):
+    from PySide6.QtTest import QTest
+    from state import Store
+    from update_prompt import UpdatePrompt
+    entry=tmp_path/'worker.py';entry.write_text('import json,sys\nr=json.loads(sys.stdin.readline())\nassert r["action"]=="probe"\nprint(json.dumps({"status":"available","version":"9.1.0"}),flush=True)\n')
+    u=Updater(tmp_path,entry);prompt=UpdatePrompt(u,Store(tmp_path/'data'));u.probe()
+    try:
+        for _ in range(100):
+            QTest.qWait(10);time.sleep(.001)
+            if prompt.data['visible']:break
+        assert prompt.data['visible'] and prompt.data['version']=='9.1.0'
+        u.data.update(status='ready',path='keep.exe');u.process=None;u.probe();assert u.process is None and u.data['path']=='keep.exe'
+    finally:prompt.close();u.close()
+
+
+def test_probe_errors_back_off_without_erasing_existing_ui(tmp_path,monkeypatch):
+    u=Updater(tmp_path,'unused.py');u.probing=True;u.data.update(status='current',message='keep')
+    u.publish({'status':'error','message':'offline'});first=u.probe_after
+    assert u.data['status']=='current' and u.data['message']=='keep' and first>time.monotonic()
+    u.publish({'status':'error','message':'offline'});assert u.probe_after>first+50
+    calls=[];monkeypatch.setattr(u,'start',calls.append);u.probe();assert not calls
+    u.publish({'status':'unchanged'});assert u.probe_after==0
+    u.probe();assert calls==['probe'];u.close()
+
+
+def test_probe_keeps_polling_after_notice_was_dismissed(tmp_path):
+    from PySide6.QtTest import QTest
+    entry=tmp_path/'probe.py';entry.write_text('import json,sys\nr=json.loads(sys.stdin.readline())\nassert r["current"]=="9.1.0"\nprint(json.dumps({"status":"available","version":"9.2.0"}),flush=True)\n')
+    u=Updater(tmp_path,entry);u.data.update(status='available',version='9.1.0');u.probe()
+    try:
+        for _ in range(100):
+            QTest.qWait(10);time.sleep(.001)
+            if u.data['version']=='9.2.0':break
+        assert u.data['version']=='9.2.0'
+    finally:u.close()

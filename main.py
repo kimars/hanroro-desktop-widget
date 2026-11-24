@@ -86,7 +86,7 @@ class Program:
         self.bridge.updates.available.connect(self.update_available)
         if IS_WINDOWS and not args.render and not args.smoke_run:
             QTimer.singleShot(5000,self.auto_check_updates)
-            self.update_timer=QTimer(self.app);self.update_timer.setInterval(6*60*60*1000);self.update_timer.timeout.connect(self.auto_check_updates);self.update_timer.start()
+            self.update_timer=QTimer(self.app);self.update_timer.setInterval(60*1000);self.update_timer.timeout.connect(self.auto_check_updates);self.update_timer.start()
         if args.render:QTimer.singleShot(2300,self.render)
         if args.smoke_run:
             self.bridge.previewUpdateNotice()
@@ -99,10 +99,10 @@ class Program:
         print('Packaged update character ready:',not bool(self.errors),flush=True)
         self.app.exit(1 if self.errors else 0)
     def auto_check_updates(self):
-        if self.store.data.get('updatesAutoCheck',True) or self.store.data.get('updatesAutoInstall',False):self.bridge.updates.check()
+        if self.store.data.get('updatesAutoCheck',True) or self.store.data.get('updatesAutoInstall',False):self.bridge.updates.probe()
     def update_available(self,version):
-        self.bridge.toast.emit('새 버전 '+version+' · 설정에서 업데이트할 수 있어요.')
-        if self.tray:self.tray.showMessage('한로로 위젯 업데이트','새 버전 '+version+'이 있습니다. 설정 → 업데이트에서 설치하세요.')
+        self.bridge.toast.emit('새 업데이트 '+version)
+        if self.tray:self.tray.showMessage('한로로 위젯 업데이트','새 버전 '+version+'이 있습니다. 바탕화면 알림에서 설치할 수 있어요.')
     def update_font(self):
         if self.app.font().family()!=self.bridge.uiFont:self.app.setFont(QFont(self.bridge.uiFont,10))
     def make_view(self,role,cls=QQuickView):
@@ -249,6 +249,7 @@ class Program:
         if self._shutting_down:return
         self._shutting_down=True;logging.info('Shutdown started')
         self.wallpaper_jobs.cancel()
+        if hasattr(self,'update_timer'):self.update_timer.stop()
         self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.update_prompt.close();self.bridge.updates.close();self.bridge.weather_link.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()
         for view in self.bridge.views:
             view.hide();view.setSource(QUrl())
