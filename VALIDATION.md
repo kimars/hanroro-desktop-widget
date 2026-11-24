@@ -76,3 +76,7 @@ Windows 실제 장치에서 재생 제어, 스피커 출력 캡처, GPU 및 체�
 - Fix six-hour background interval to 60 seconds, using public HEAD redirect probes and verified REST metadata only for a newer version.
 - Added HEAD preservation through redirects, no REST lookup for current version, cross-repository redirect rejection, subprocess probe → desktop prompt integration without settings, and quiet retry/backoff tests.
 - Existing install/download hash and trusted-host checks remain in place. Old clients retain their previous schedule until this version is installed.
+
+
+## 1.6.2
+Removed weather UI, location preferences, weather service and its QML card. Existing persisted weather settings are discarded by state validation. Night lighting uses only PC time (19:00–07:00). Regression tests cover legacy weather settings removal, custom colors, palette mouse input and native night/day wallpaper restoration.

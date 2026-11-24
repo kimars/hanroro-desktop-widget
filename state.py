@@ -11,9 +11,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-WIDGET_SIZES={'weather':(280,320),'clock':(600,220),'photos':(210,280),'player':(348,432),'memo':(360,260),'calendar':(280,194),'dock':(652,164),'visualizer':(340,112),'system':(340,190),'focus':(340,250)}
+WIDGET_SIZES={'clock':(600,220),'photos':(210,280),'player':(348,432),'memo':(360,260),'calendar':(280,194),'dock':(652,164),'visualizer':(340,112),'system':(340,190),'focus':(340,250)}
 WIDGETS = {
-    'weather': {'x':1180,'y':548,'scale':.85,'visible':False,'color':''},
     'clock': {'x':64,'y':54,'scale':1.,'visible':True,'color':''},
     'photos': {'x':1330,'y':86,'scale':.8,'visible':False,'color':''},
     'player': {'x':64,'y':296,'scale':1.,'visible':True,'color':''},
@@ -48,7 +47,7 @@ DEFAULT_LINKS = [
     {'title':'버튼 관리','target':'action:shortcuts','glyph':'app'},
 ]
 DEFAULT = {
-    'version': 4, 'nightLighting':False, 'weatherCity':'', 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
+    'version': 4, 'nightLighting':False, 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
     'imageBackground': '', 'videoBackground': '', 'wallpaperSlides': [], 'wallpaperRotation': False, 'screen': '', 'motion': True, 'fps': 30, 'photoInterval': 30,
     'wallpaperFit':'fill','mediaSource':'', 'dim': .0, 'volume': .6, 'slideshow': True,
     'widgets': WIDGETS, 'photos': [], 'playlist': [], 'memo': '',
@@ -71,7 +70,7 @@ def validate(data):
         except (ValueError, TypeError, OverflowError): pass
     for key, options in [('theme', ('apricot','ocean','night')), ('backgroundMode', ('room','image','video'))]:
         if data.get(key) in options: out[key] = 'image' if key=='backgroundMode' and data[key]=='room' else data[key]
-    for key in ('background','imageBackground','videoBackground','screen','memo','mediaSource','weatherCity'):
+    for key in ('background','imageBackground','videoBackground','screen','memo','mediaSource'):
         if isinstance(data.get(key),str): out[key] = data[key][:20000]
     for key in ('nightLighting','motion','slideshow','wallpaperRotation','hideDesktopIcons','audioReactive','updatesAutoCheck','updatesAutoInstall'):
         if isinstance(data.get(key),bool): out[key] = data[key]

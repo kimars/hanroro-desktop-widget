@@ -16,7 +16,7 @@ Item {
     readonly property color edge:dark?"#45ffffff":"#aaffffff"
     readonly property bool surfaceActive:Window.window!==null && Window.window.visible
     readonly property bool moving:s.motion&&!bridge.backgroundPaused&&!bridge.editMode&&surfaceActive
-    readonly property bool nightActive:s.nightLighting&&(bridge.weather.status==="ready"?!bridge.weather.isDay:(now.getHours()>=19||now.getHours()<7))
+    readonly property bool nightActive:s.nightLighting&&(now.getHours()>=19||now.getHours()<7)
     property date now:new Date()
     property bool videoFailed:false
     property string selectedDecoration:""
@@ -24,7 +24,7 @@ Item {
     function updateRegions(){
         if(layerRole!=="overlay")return
         let regions=[]
-        for(let it of [clock,player,memo,calendar,dock,systemMonitor,focusTimer,weatherWindow,tools]){
+        for(let it of [clock,player,memo,calendar,dock,systemMonitor,focusTimer,tools]){
             if(!it.visible)continue
             let top=it.mapToItem(scene,-10,-42),bottom=it.mapToItem(scene,it.width+16,it.height+14)
             regions.push({x:Math.floor(top.x),y:Math.floor(top.y),w:Math.ceil(bottom.x-top.x),h:Math.ceil(bottom.y-top.y)})
@@ -81,7 +81,6 @@ Item {
         LauncherCard {id:dock;objectName:"launcherCard";visible:cfg.visible&&scene.fg}
         SystemCard {id:systemMonitor;objectName:"systemCard";visible:cfg.visible&&scene.fg}
         FocusCard {id:focusTimer;objectName:"focusCard";visible:cfg.visible&&scene.fg}
-        WeatherCard {id:weatherWindow;visible:cfg.visible&&scene.fg;moving:scene.moving}
         Item {id:tools;x:1348;y:804;width:198;height:48;visible:scene.fg
             Rectangle {antialiasing:true;anchors.fill:parent;radius:24;color:scene.surface;border.color:scene.edge}
             Row {anchors.centerIn:parent;spacing:4

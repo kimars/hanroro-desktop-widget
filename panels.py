@@ -14,7 +14,7 @@ from font_config import settings_font
 from panel_ui import STYLE as PANEL_STYLE,ToggleSwitch,Stepper,AspectPreview,PhotoDelegate,ShortcutDelegate,UploadTile,card,label,icon,segment,thumbnail,choose_color,settings_style
 
 STYLE=PANEL_STYLE
-NAMES={'weather':'날씨 창문','clock':'시계','photos':'사진','player':'음악','memo':'메모','calendar':'달력 · 일정','dock':'바로가기','visualizer':'오디오 비주얼라이저','system':'시스템 모니터','focus':'집중 타이머'}
+NAMES={'clock':'시계','photos':'사진','player':'음악','memo':'메모','calendar':'달력 · 일정','dock':'바로가기','visualizer':'오디오 비주얼라이저','system':'시스템 모니터','focus':'집중 타이머'}
 
 def button(text,callback,primary=False):
     b=QPushButton(text);b.clicked.connect(callback)
@@ -219,19 +219,13 @@ class Settings(QDialog):
         row=QHBoxLayout();presets=QComboBox();presets.addItems(['왼쪽','오른쪽','하단']);presets.setCurrentIndex(['left','right','bottom'].index(self.b.store.data['layoutPreset']));presets.currentIndexChanged.connect(lambda i:self.b.applyLayout(['left','right','bottom'][i]));row.addWidget(presets);row.addWidget(button('바탕화면에서 배치',self.b.toggleEdit,True));dv.addLayout(row)
         form=QFormLayout();form.setSpacing(12);self.widget_checks={};self.widget_spins={};self.color_buttons={}
         for key in WIDGETS:
-            if key in ('photos','visualizer','weather'):continue
+            if key in ('photos','visualizer'):continue
             check=QCheckBox(NAMES[key]);check.setChecked(self.b.store.data['widgets'][key]['visible']);check.toggled.connect(lambda value,k=key:self.visibility(k,value));self.widget_checks[key]=check
             row=QHBoxLayout();row.addWidget(check,1);spin=Stepper();spin.setRange(.45,1.8);spin.setSingleStep(.05);spin.setDecimals(2);spin.setValue(self.b.store.data['widgets'][key]['scale']);self.widget_spins[key]=spin;spin.valueChanged.connect(lambda value,k=key:self.b.scaleWidget(k,value));row.addWidget(spin)
             swatch=button('색',lambda _,k=key:self.widget_color(k));self.color_buttons[key]=swatch;row.addWidget(swatch);form.addRow(row)
         dv.addLayout(form);more=QHBoxLayout();more.addWidget(button('음악 연결',lambda:self.open_page(3)));more.addWidget(button('메모 · 일정',lambda:self.open_page(5)));more.addWidget(button('집중 타이머',lambda:self.open_page(7)));dv.addLayout(more);dv.addStretch();dv.addWidget(button('배치 초기화',self.reset_layout));tabs.addTab(display,'표시 · 배치')
         colors=QWidget();cv=QVBoxLayout(colors);cv.setSpacing(16);cv.addWidget(button('전체 위젯 색',self.global_color));cv.addWidget(button('강조 색',self.accent_color));opacity=QSlider(Qt.Orientation.Horizontal);opacity.setRange(35,100);opacity.setValue(round(self.b.store.data['widgetOpacity']*100));opacity.valueChanged.connect(lambda n:self.b.set_option('widgetOpacity',n/100));cv.addWidget(label('불투명도'));cv.addWidget(opacity);cv.addWidget(button('기본 색으로 복원',self.reset_colors));cv.addStretch();tabs.addTab(colors,'색상')
-        weather_box,wv=card('밤과 날씨');lighting=QCheckBox('밤 조명');lighting.setChecked(self.b.store.data['nightLighting']);lighting.toggled.connect(lambda enabled:self.b.set_option('nightLighting',enabled));wv.addWidget(lighting)
-        weather=QCheckBox('날씨 창문');weather.setChecked(self.b.store.data['widgets']['weather']['visible']);weather.toggled.connect(lambda active:self.visibility('weather',active));wv.addWidget(weather)
-        self.weather_city=QLineEdit(self.b.store.data['weatherCity']);self.weather_city.setPlaceholderText('자동 위치 · 직접 지정하려면 도시 입력');cityrow=QHBoxLayout();cityrow.addWidget(self.weather_city,1);cityrow.addWidget(button('적용',lambda:self.b.set_option('weatherCity',self.weather_city.text().strip()[:80])));wv.addLayout(cityrow)
-        wv.addWidget(label('자동 위치는 IP 기준 · Open-Meteo 날씨','sub'));self.weather_status=label('','sub');self.weather_status.setWordWrap(True);wv.addWidget(self.weather_status);self.b.weatherChanged.connect(self.refresh_weather);wv.addWidget(button('날씨 새로고침',self.b.refreshWeather));wv.addStretch();tabs.addTab(weather_box,'밤 · 날씨');self.add(w)
-    def refresh_weather(self):
-        d=self.b.weather
-        self.weather_status.setText((d['city']+' · '+d['updated']) if d['status']=='ready' else {'error':'날씨 연결 실패 · 도시를 직접 지정하거나 다시 시도','loading':'날씨 확인 중','off':''}.get(d['status'],''))
+        lighting_box,lv=card('밤 조명');lighting=QCheckBox('밤 조명');lighting.setChecked(self.b.store.data['nightLighting']);lighting.toggled.connect(lambda enabled:self.b.set_option('nightLighting',enabled));lv.addWidget(lighting);lv.addStretch();tabs.addTab(lighting_box,'밤 조명');self.add(w)
     def global_color(self):
         color=choose_color(QColor(self.b.store.data['widgetColor'] or '#f2f7fb'),self,'위젯 색상')
         if color.isValid():self.b.set_option('widgetColor',color.name())

@@ -15,7 +15,6 @@ from state import Store,WIDGETS,WIDGET_SIZES,layout_for
 from wallpaper import render_wallpaper
 from app_catalog import app_shell_target
 from font_config import ui_family
-from weather_link import WeatherLink
 from media_link import MediaLink
 from telemetry_link import TelemetryLink
 from desktop_features import DesktopFeatures
@@ -27,15 +26,12 @@ from room_items import CATALOG,normalize_item
 
 log=logging.getLogger(__name__)
 class Bridge(QObject):
-    weatherChanged=Signal()
     updateNoticeChanged=Signal()
     decorationsChanged=Signal();dragActivity=Signal();layoutChanged=Signal();audioChanged=Signal();featureChanged=Signal();telemetryChanged=Signal()
     stateChanged=Signal();photoChanged=Signal();musicChanged=Signal();pausedChanged=Signal()
     memoChanged=Signal();inputChanged=Signal();memoInputRequested=Signal();editChanged=Signal();toast=Signal(str);requestRestore=Signal();requestSection=Signal(int);requestShowDesktop=Signal();requestSettings=Signal();requestMemo=Signal();requestEvents=Signal();requestDesktop=Signal();requestPreview=Signal()
     def __init__(self,store,assets):
         super().__init__();self.store=store;self.assets=Path(assets);self.views=[];self.overlay=None;self.desktop=False
-        self.weather_link=WeatherLink(self);self.weather_link.changed.connect(self.weatherChanged);self.weather_link.changed.connect(self.refresh_state)
-        self.stateChanged.connect(self.sync_weather);QTimer.singleShot(0,self.sync_weather)
         self._state_cache=None;self._wallpaper_cache_key=None;self._wallpaper_cache_path=None;self._region_key=None;self._interactive_region=QRegion()
         self._input=False;self._edit=False;self._paused=False;self._settings=None;self.wallpaper_size=(1920,1080)
         self.updates=Updater(store.directory,Path(__file__).resolve().parent/'main.py',self);self.updates.notice.connect(self.toast)
@@ -60,12 +56,6 @@ class Bridge(QObject):
             p=Path(store.data[key])
             if store.data[key] and not p.is_file() and (self.assets/p.name).is_file():store.data[key]=str(self.assets/p.name)
         store.data['photos']=[str(self.assets/'photos'/Path(p).name) if not Path(p).is_file() and (self.assets/'photos'/Path(p).name).is_file() else p for p in store.data['photos']]
-    def sync_weather(self):
-        d=self.store.data;self.weather_link.configure(d['widgets']['weather']['visible'],d.get('weatherCity',''))
-    @Property('QVariantMap',notify=weatherChanged)
-    def weather(self):return dict(self.weather_link.data)
-    @Slot()
-    def refreshWeather(self):self.weather_link.refresh()
     @Property('QVariantMap',notify=updateNoticeChanged)
     def updateNotice(self):return dict(self.update_prompt.data)
     @Slot()
@@ -387,8 +377,7 @@ class Bridge(QObject):
         self.toast.emit('영상 재생 실패: '+str(message)[:140])
     def night_active(self):
         if not self.store.data.get('nightLighting'):return False
-        weather=self.weather_link.data
-        return not weather['isDay'] if weather['status']=='ready' else datetime.now().hour>=19 or datetime.now().hour<7
+        return datetime.now().hour>=19 or datetime.now().hour<7
     def wallpaper_path(self):
         d=self.store.data;source=self.active_wallpaper();dim=min(.85,1-(1-d['dim'])*(1-(.22 if self.night_active() else 0)))
         key=(source,d['theme'],dim,self.wallpaper_size,d.get('wallpaperFit','fill'))
