@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 env:
   PYTHONUTF8: '1'
-  HANRORO_BUILD_PIPELINE: '4'
+  HANRORO_BUILD_PIPELINE: '5'
 permissions:
   contents: write
 concurrency:

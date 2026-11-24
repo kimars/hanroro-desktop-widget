@@ -10,7 +10,7 @@ class Results(QObject):
 
 class AppPicker(QDialog):
     def __init__(self,parent=None):
-        super().__init__(parent);self.setStyleSheet(STYLE);self.setWindowTitle('앱 선택');self.resize(620,590);self.selected=None
+        super().__init__(parent);self.setStyleSheet(parent.window().styleSheet() if parent else STYLE);self.setWindowTitle('앱 선택');self.resize(620,590);self.selected=None
         layout=QVBoxLayout(self);layout.setContentsMargins(24,24,24,24);layout.setSpacing(14)
         title=QLabel('설치된 앱');title.setStyleSheet('font-size:24px;font-weight:600;');layout.addWidget(title)
         self.search=QLineEdit();self.search.setPlaceholderText('앱 이름 검색');self.search.textChanged.connect(self.filter);layout.addWidget(self.search)

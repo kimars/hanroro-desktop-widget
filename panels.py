@@ -36,7 +36,7 @@ QCheckBox=ToggleSwitch
 
 class CalendarPickerDialog(QDialog):
     def __init__(self,value,parent=None):
-        super().__init__(parent);self.setWindowTitle('날짜 선택');self.setModal(True);self.resize(330,340);self.selected=QDate(value);self.month=QDate(value.year(),value.month(),1);self.setStyleSheet(STYLE)
+        super().__init__(parent);self.setWindowTitle('날짜 선택');self.setModal(True);self.resize(330,340);self.selected=QDate(value);self.month=QDate(value.year(),value.month(),1);self.setStyleSheet(parent.window().styleSheet() if parent else STYLE)
         root=QVBoxLayout(self);root.setContentsMargins(18,18,18,18);root.setSpacing(12)
         header=QHBoxLayout();prev=QToolButton();prev.setObjectName('calendarNav');prev.setFixedSize(28,28);prev.setIcon(icon('chevron-left'));prev.clicked.connect(self.prev_month);header.addWidget(prev)
         self.month_label=QLabel();self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter);self.month_label.setStyleSheet('font-size:17px;font-weight:650;');header.addWidget(self.month_label,1)
@@ -95,7 +95,7 @@ class Settings(QDialog):
             for glyph,b in self.icon_buttons.items():b.setIcon(icon(glyph,dark))
         if hasattr(self,'link_list'):self.link_list.viewport().update()
     def open_page(self,index):
-        if index in self.nav_routes:self.nav.setCurrentRow(self.nav_routes.index(index))
+        self.nav.setCurrentRow(self.nav_routes.index(index) if index in self.nav_routes else -1)
         self.stack.setCurrentIndex(index)
     def add(self,w):self.stack.addWidget(w)
     def general(self):

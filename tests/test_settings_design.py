@@ -131,6 +131,7 @@ def test_compact_navigation_reaches_secondary_pages_and_dark_mode(panel):
     assert panel.nav.count()==6
     for target in range(10):
         panel.open_page(target);assert panel.stack.currentIndex()==target
+    panel.open_page(5);panel.nav.setCurrentRow(2);assert panel.stack.currentIndex()==2
     panel.theme.setChecked(True)
     assert panel.b.store.data['theme']=='night' and panel.property('darkTheme')
     assert '#182325' in panel.styleSheet()
