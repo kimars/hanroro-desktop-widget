@@ -9,8 +9,10 @@ def copy(src,dst):dst.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,
 def tree(src,dst):shutil.copytree(src,dst,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc','*.lib','*.pyi','include'))
 for p in PYTHON.iterdir():
  if p.is_file():copy(p,CORE/p.name)
+RETIRED_SHELL={'desktop_shell.py','desktop_native.py','desktop_worker.py','shell_groups.py','shell_service.py','shell_native.py','shell_search.py','shell_windows.py','taskbar_catalog.py','window_previews.py','HanroroShell.exe'}
+for name in RETIRED_SHELL:(CORE/name).unlink(missing_ok=True)
 for p in SOURCE.glob('*.py'):
- if p.name not in ['build_release.py','windows_version_info.py']:copy(p,CORE/p.name)
+ if p.name not in RETIRED_SHELL and p.name not in ['build_release.py','windows_version_info.py']:copy(p,CORE/p.name)
 for name in ['assets','qml']:tree(SOURCE/name,CORE/name)
 for stale in (CORE/'qml').glob('*.qml'):
  if not (SOURCE/'qml'/stale.name).exists():stale.unlink()

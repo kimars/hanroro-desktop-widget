@@ -109,10 +109,6 @@ class Settings(QDialog):
         self.mode.currentIndexChanged.connect(lambda i:self.b.set_option('backgroundMode',['image','video'][i]));form.addRow('배경',self.mode)
         screens=QComboBox();screens.addItems([s.name() for s in self.app.screens()]);idx=screens.findText(d['screen']);screens.setCurrentIndex(max(0,idx));screens.currentTextChanged.connect(self.change_screen);form.addRow('모니터',screens)
         dim=QSlider(Qt.Orientation.Horizontal);dim.setRange(0,85);dim.setValue(int(d['dim']*100));dim.valueChanged.connect(lambda n:self.b.set_option('dim',n/100));form.addRow('배경 어둡기',dim);v.addLayout(form)
-        shell,shellv=card('독 · 검색')
-        for key,title in [('macDock','맥 스타일 독'),('dockAutoHide','독 자동 숨김'),('hideTaskbar','기존 작업 표시줄 숨기기'),('winKeySearch','Windows 키로 검색 열기')]:
-            check=QCheckBox(title);check.setChecked(d.get(key,False));check.toggled.connect(lambda active,k=key:self.b.set_option(k,active));shellv.addWidget(check)
-        v.addWidget(shell)
         quick=QHBoxLayout();quick.addWidget(button('음악 연결',lambda:self.open_page(3)));quick.addWidget(button('데이터 백업',lambda:self.open_page(6)));v.addLayout(quick)
         reactive=QCheckBox('오디오 비주얼라이저');reactive.setChecked(d['audioReactive']);reactive.toggled.connect(lambda value:self.b.set_option('audioReactive',value));v.addWidget(reactive)
         motion=QCheckBox('애니메이션');motion.setChecked(d['motion']);motion.toggled.connect(lambda x:self.b.set_option('motion',x));v.addWidget(motion)

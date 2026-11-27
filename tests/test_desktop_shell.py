@@ -22,7 +22,7 @@ def test_quality_and_preferences_validate():
     assert output_size((1080,1920),'4k')==(2160,3840)
     assert output_size((2560,1080),'4k')==(3840,1620)
     d=validate({'macDock':'yes','hideTaskbar':True,'winKeySearch':True,'wallpaperQuality':'invalid','accentColor':'#112233'})
-    assert d['macDock'] is True and d['hideTaskbar'] and d['winKeySearch'] and d['wallpaperQuality']=='4k' and d['accentColor']=='#112233'
+    assert d['macDock'] is False and not d['hideTaskbar'] and not d['winKeySearch'] and d['wallpaperQuality']=='4k' and d['accentColor']=='#112233'
 
 
 def test_rank_and_bounded_file_search(tmp_path):
@@ -86,7 +86,7 @@ def test_dock_has_pages_restores_widget_buttons_and_uses_desktop_layer(tmp_path,
         assert len([r for r in shell.dock.all_rows if r.get('kind')=='taskbar'])==70 and shell.dock.pages>1
         assert shell.dock.rows[-1]['target']=='shell:next'
         source=(Path(__file__).resolve().parents[1]/'qml/Scene.qml').read_text();line=next(l for l in source.splitlines() if 'LauncherCard {' in l)
-        assert 'scene.layerRole' in line  # Launcher shortcuts live in the system dock on the desktop.
+        assert 's.macDock' not in line  # Original launcher is restored.
     finally:
         shell.close();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.updates.close();b.update_prompt.close();b.telemetry_link.close();b.features_controller.close();b.deleteLater();QTest.qWait(10)
 

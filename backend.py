@@ -490,6 +490,7 @@ class Bridge(QObject):
             remaining=self._slide_remaining;self._slide_remaining=None;self.slides.start(remaining)
         self.pausedChanged.emit()
     def set_option(self,key,value):
+        if key in ('macDock','dockAutoHide','hideTaskbar','winKeySearch'):return
         if key=='memo':self.setMemo(str(value));return
         self.store.data[key]=value
         if key=='updatesAutoInstall':
