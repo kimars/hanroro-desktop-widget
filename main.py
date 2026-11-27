@@ -7,6 +7,16 @@ import sys
 from pathlib import Path
 
 # Run native work before loading Qt Quick or creating a GUI in the helper process.
+if __name__=='__main__' and '--shell-file-search' in sys.argv:
+    from desktop_worker import search_once
+    sys.exit(search_once())
+if __name__=='__main__' and '--shell-worker' in sys.argv:
+    from desktop_worker import run
+    sys.exit(run())
+if __name__=='__main__' and '--shell-inventory' in sys.argv:
+    from desktop_worker import inventory
+    sys.exit(inventory())
+
 if __name__=='__main__' and '--update-worker' in sys.argv:
     from update_worker import run
     sys.exit(run())
@@ -76,7 +86,7 @@ class Program:
         self.bridge.requestDesktop.connect(self.desktop);self.bridge.requestPreview.connect(self.show_preview)
         app.aboutToQuit.connect(self.shutdown)
         from app_windows import warm_app_shortcuts
-        warm_app_shortcuts()
+        if not self.store.data.get('macDock',True):warm_app_shortcuts()
         self.make_tray()
         self.preview=self.make_view('preview',Preview);self.preview.setTitle('한로로 바탕화면 위젯 · 미리보기');self.preview.resize(1440,810);self.preview.keep_in_tray=bool(self.tray)
         if args.render or args.smoke_run or args.preview or not IS_WINDOWS:self.show_preview()
@@ -201,6 +211,7 @@ class Program:
             if not self.args.render and not self.args.smoke_run:QMessageBox.information(None,'Windows 전용','바탕화면 적용은 Windows에서 지원합니다.')
             self.show_preview();return
         if self.bridge.desktop:self.leave_desktop()
+        self._screen_signature=tuple((s.name(),s.geometry().x(),s.geometry().y(),s.geometry().width(),s.geometry().height(),s.devicePixelRatio()) for s in self.app.screens())
         self.screen=self.pick_screen();dpr=self.screen.devicePixelRatio();g=self.screen.geometry()
         self.bridge.wallpaper_size=(max(640,round(g.width()*dpr)),max(360,round(g.height()*dpr)))
         self._wallpaper_signature=None;self._wallpaper_failed_signature=None
@@ -242,7 +253,11 @@ class Program:
         if self.bridge.desktop and self.store.data['hideDesktopIcons']:self.icons.hide()
         else:self.icons.restore()
     def screens_changed(self,*_):
-        if self.bridge.desktop and not self._applying:QTimer.singleShot(500,self.desktop)
+        if not self.bridge.desktop or self._applying:return
+        signature=tuple((s.name(),s.geometry().x(),s.geometry().y(),s.geometry().width(),s.geometry().height(),s.devicePixelRatio()) for s in self.app.screens())
+        previous=getattr(self,'_screen_signature',signature);self._screen_signature=signature
+        if signature!=previous:QTimer.singleShot(500,self.desktop)
+        else:self.shell.workarea_changed()
     def tick(self):
         if self.bridge.desktop:
             if not self.host.alive():

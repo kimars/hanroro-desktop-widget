@@ -123,11 +123,22 @@ class DesktopHost:
         if not IS_WINDOWS or not self.overlay:return False
         hwnd=int(hwnd)
         if not hasattr(self,'auxiliary'):self.auxiliary=set()
+        if hwnd in self.auxiliary:return True
         self.auxiliary.add(hwnd);ex=self.getlong(hwnd,-20);self.setlong(hwnd,-20,(ex|0x80|0x08000000)&~0x40008);self.setlong(hwnd,-8,int(self.progman));self.sync_auxiliary();return True
+    def set_auxiliary_revealed(self,hwnd,revealed):
+        if not IS_WINDOWS:return
+        if not hasattr(self,'auxiliary_revealed'):self.auxiliary_revealed=set()
+        if revealed:self.auxiliary_revealed.add(hwnd)
+        else:self.auxiliary_revealed.discard(hwnd)
+        self.allow_zorder=True
+        try:self.u.SetWindowPos(hwnd,-1 if revealed else -2,0,0,0,0,0x0001|0x0002|0x0010)
+        finally:self.allow_zorder=False
+        if not revealed:self.sync_auxiliary()
     def sync_auxiliary(self):
         if not IS_WINDOWS or not self.overlay:return
         for hwnd in list(getattr(self,'auxiliary',set())):
             if not self.u.IsWindow(hwnd):self.auxiliary.discard(hwnd);continue
+            if hwnd in getattr(self,'auxiliary_revealed',set()):continue
             previous=self.u.GetWindow(self.overlay,3)
             if not previous or previous==hwnd:continue
             self.allow_zorder=True
@@ -139,8 +150,9 @@ class DesktopHost:
             if self.overlay and self.u.IsWindow(self.overlay):self.setlong(self.overlay,-8,0)
         if IS_WINDOWS:
             for hwnd in getattr(self,'auxiliary',set()):
-                if self.u.IsWindow(hwnd):self.setlong(hwnd,-8,0)
-            self.auxiliary=set()
+                if self.u.IsWindow(hwnd):
+                    self.set_auxiliary_revealed(hwnd,False);self.setlong(hwnd,-8,0)
+            self.auxiliary=set();self.auxiliary_revealed=set()
         self.parent=self.background=self.overlay=self.desktop_root=0;self.input_active=False
     def fullscreen_app(self,screen):
         if not IS_WINDOWS:return False

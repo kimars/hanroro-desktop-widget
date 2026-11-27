@@ -28,11 +28,12 @@ def visible_windows():
             try:cached=(now,_process_path(k,process),_window_app_id(k,process));_cache[pid.value]=cached
             finally:k.CloseHandle(process)
         path,appid=cached[1:]
-        if not path:return True
         identity=(int(hwnd),pid.value)
-        if identity not in _appids:_appids[identity]=_window_property_id(hwnd) or appid
-        appid=_appids[identity];target='app:'+appid if appid else path
-        paths.add(path.casefold());paths.add(target.casefold());rows.append({'hwnd':int(hwnd),'pid':pid.value,'name':text.value,'path':path,'target':target,'kind':'running','minimized':bool(u.IsIconic(hwnd))});return True
+        if identity not in _appids:_appids[identity]=_window_property_id(hwnd)
+        appid=_appids[identity] or appid
+        if not path:return True
+        target='app:'+appid if appid else path
+        paths.add(path.casefold());paths.add(target.casefold());rows.append({'hwnd':int(hwnd),'pid':pid.value,'name':text.value,'path':path,'target':target,'app_id':appid,'kind':'running','minimized':bool(u.IsIconic(hwnd))});return True
     u.EnumWindows.argtypes=[callback,wintypes.LPARAM];u.EnumWindows(visit,0)
     for pid in list(_cache):
         if pid not in live_pids:del _cache[pid]

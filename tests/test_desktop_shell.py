@@ -96,7 +96,7 @@ def test_window_picker_keeps_all_windows_and_start_has_all_apps(tmp_path,qt_appl
     b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');shell=desktop_shell.DesktopShell(SimpleNamespace(app=qt_application,bridge=b,pick_screen=qt_application.primaryScreen));shell.started=True
     try:
         shell.running_rows=[{'target':'app:test','hwnd':i,'pid':10,'name':'Document '+str(i)} for i in range(4)]
-        shell.choose_item({'name':'Test','target':'app:test'});assert len(shell.window_menu.actions())==4;shell.window_menu.close()
+        shell.choose_item({'name':'Test','target':'app:test'});assert len(shell.chooser.entries)==4;shell.chooser.close()
         shell.apps=[{'name':'App '+str(i),'target':'app:'+str(i),'path':''} for i in range(300)];shell.toggle_search();shell.search.field.clear();shell.search.query_changed()
         assert shell.search.results.count()==300
         from PySide6.QtWidgets import QListView

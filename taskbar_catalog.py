@@ -52,9 +52,11 @@ def group_windows(rows):
 
 
 def dock_rows(taskbar,running):
-    result=[dict(r) for r in taskbar];known={r['target'].casefold() for r in result}
+    from desktop_native import matching_windows
+    result=[dict(r) for r in taskbar];matched={int(w.get('hwnd',0)) for r in taskbar for w in matching_windows(r,running) if w.get('hwnd')};known={r['target'].casefold() for r in result}
     paths={str(r.get('path','')).casefold() for r in result if r.get('path')}
     for row in running:
+        if row.get('hwnd') in matched:continue
         key=row['target'].casefold();path=str(row.get('path','')).casefold()
         if key not in known and (not path or path not in paths):result.append(dict(row));known.add(key)
     return result
