@@ -32,7 +32,7 @@ def test_rotation_durations_pause_missing_and_video(tmp_path):
         b.set_option('backgroundMode','image');assert b.slides.isActive()
         b.store.data['wallpaperSlides'].pop(1);b.wallpaper_slides_changed();assert not b.slides.isActive()
     finally:
-        b.slides.stop();b.midnight.stop();b.writer.close();b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close()
+        b.slides.stop();b.midnight.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close()
 
 def test_editor_multiselect_time_reorder_delete(tmp_path):
     assets=Path(__file__).resolve().parents[1]/'assets';b=Bridge(Store(tmp_path),assets);panel=Settings(b,QApplication.instance())
@@ -43,4 +43,4 @@ def test_editor_multiselect_time_reorder_delete(tmp_path):
         panel.remove_wallpaper();assert len(b.store.data['wallpaperSlides'])==1
         b.persist();assert Store(tmp_path).data['wallpaperSlides']==b.store.data['wallpaperSlides']
     finally:
-        panel.close();panel.deleteLater();b.slides.stop();b.midnight.stop();b.writer.close();b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close()
+        panel.close();panel.deleteLater();b.slides.stop();b.midnight.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close()

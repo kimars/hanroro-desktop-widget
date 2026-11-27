@@ -67,6 +67,8 @@ class Program:
         self._wallpaper_signature=None;self._wallpaper_failed_signature=None;self.native_wallpaper_updates=0
         self.wallpaper_timer=QTimer();self.wallpaper_timer.setSingleShot(True);self.wallpaper_timer.setInterval(400);self.wallpaper_timer.timeout.connect(self.refresh_wallpaper)
         self.bridge.stateChanged.connect(lambda:self.wallpaper_timer.start() if self.bridge.desktop else None)
+        from desktop_shell import DesktopShell
+        self.shell=DesktopShell(self)
         self.screen=self.pick_screen()
         self.bridge.requestRestore.connect(self.restore_background);self.bridge.requestSection.connect(self.settings);self.bridge.requestShowDesktop.connect(self.show_desktop);self.bridge.requestSettings.connect(lambda:self.settings(0));self.bridge.requestMemo.connect(lambda:self.settings(5));self.bridge.requestEvents.connect(lambda:self.settings(5))
         self.app.setFont(QFont(self.bridge.uiFont,10));self.bridge.stateChanged.connect(self.update_font);self.bridge.stateChanged.connect(self.sync_icons)
@@ -140,7 +142,7 @@ class Program:
         if self.bridge.desktop:self.leave_desktop()
         if self.preview:self.preview.show();self.preview.raise_();self.preview.requestActivate()
     def leave_desktop(self):
-        self.bridge.setInputActive(False);self.bridge.desktop=False;self.wallpaper_jobs.cancel();self._wallpaper_inflight_signature=None;self.icons.restore();self.host.detach()
+        self.bridge.setInputActive(False);self.bridge.desktop=False;self.shell.configure();self.wallpaper_jobs.cancel();self._wallpaper_inflight_signature=None;self.icons.restore();self.host.detach()
         for v in (self.background,self.overlay):
             if v:v.hide();v.close();v.deleteLater();self.bridge.views.remove(v)
         self.background=None;self.overlay=None;self.bridge.overlay=None
@@ -211,7 +213,7 @@ class Program:
             self.leave_desktop();logging.error('Desktop shell not found; preview was not opened')
             if self.tray:self.tray.showMessage('한로로','바탕화면 연결 실패. 트레이에서 다시 적용하세요.')
             return
-        self.bridge.desktop=True;self._desktop_background_mode=self.store.data['backgroundMode'];self.preview.hide();self.refresh_wallpaper()
+        self.bridge.desktop=True;self.shell.configure();self._desktop_background_mode=self.store.data['backgroundMode'];self.preview.hide();self.refresh_wallpaper()
         if self.store.data['backgroundMode']=='video':
             self.background=self.make_view('background');self.background.setScreen(self.screen);self.background.setGeometry(g);self.background.show()
             if not self.host.attach(int(self.background.winId()),int(self.overlay.winId()),self.screen):
@@ -248,6 +250,7 @@ class Program:
     def shutdown(self):
         if self._shutting_down:return
         self._shutting_down=True;logging.info('Shutdown started')
+        self.shell.close();self.bridge.media_importer.close();self.bridge.wallpaper_cache.close()
         self.wallpaper_jobs.cancel()
         if hasattr(self,'update_timer'):self.update_timer.stop()
         self.watch.stop();self.icon_watch.stop();self.wallpaper_timer.stop();self.bridge.slides.stop();self.bridge.midnight.stop();self.bridge.debounce.stop();self.app.inputMethod().commit();self.bridge.setInputActive(False);self.bridge.persist();self.bridge.writer.close();self.bridge.update_prompt.close();self.bridge.updates.close();self.bridge.media.close();self.bridge.telemetry_link.close();self.bridge.features_controller.close();self.icons.restore();self.host.detach()

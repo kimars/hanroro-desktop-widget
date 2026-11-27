@@ -86,7 +86,10 @@ class Settings(QDialog):
         self.general();self.media();self.layout_page();self.music();self.shortcuts();self.notes();self.backups();self.extras();self.room();self.update_page()
         self.nav_routes=[0,1,2,4,8,9]
         self.nav.currentRowChanged.connect(lambda i:self.stack.setCurrentIndex(self.nav_routes[i]) if i>=0 else None);self.nav.setCurrentRow(0)
-        self.b.stateChanged.connect(self.refresh_theme);self.refresh_theme()
+        self.b.stateChanged.connect(self.refresh_theme);self.b.mediaImported.connect(self.imported_background);self.refresh_theme()
+    def imported_background(self):
+        self.mode.blockSignals(True);self.mode.setCurrentIndex(1 if self.b.store.data['backgroundMode']=='video' else 0);self.mode.blockSignals(False)
+        self.wallpaper_rotation.blockSignals(True);self.wallpaper_rotation.setChecked(self.b.store.data['wallpaperRotation']);self.wallpaper_rotation.blockSignals(False);self.refresh_wallpaper_list();self.refresh_wallpaper_preview()
     def refresh_theme(self):
         dark=self.b.store.data['theme']=='night'
         if getattr(self,'_dark_style',None)!=dark:self._dark_style=dark;self.setProperty('darkTheme',dark);self.setStyleSheet(settings_style(dark));self.refresh_theme_icons(dark)
@@ -106,6 +109,10 @@ class Settings(QDialog):
         self.mode.currentIndexChanged.connect(lambda i:self.b.set_option('backgroundMode',['image','video'][i]));form.addRow('배경',self.mode)
         screens=QComboBox();screens.addItems([s.name() for s in self.app.screens()]);idx=screens.findText(d['screen']);screens.setCurrentIndex(max(0,idx));screens.currentTextChanged.connect(self.change_screen);form.addRow('모니터',screens)
         dim=QSlider(Qt.Orientation.Horizontal);dim.setRange(0,85);dim.setValue(int(d['dim']*100));dim.valueChanged.connect(lambda n:self.b.set_option('dim',n/100));form.addRow('배경 어둡기',dim);v.addLayout(form)
+        shell,shellv=card('독 · 검색')
+        for key,title in [('macDock','맥 스타일 독'),('dockAutoHide','독 자동 숨김'),('hideTaskbar','기존 작업 표시줄 숨기기'),('winKeySearch','Windows 키로 검색 열기')]:
+            check=QCheckBox(title);check.setChecked(d.get(key,False));check.toggled.connect(lambda active,k=key:self.b.set_option(k,active));shellv.addWidget(check)
+        v.addWidget(shell)
         quick=QHBoxLayout();quick.addWidget(button('음악 연결',lambda:self.open_page(3)));quick.addWidget(button('데이터 백업',lambda:self.open_page(6)));v.addLayout(quick)
         reactive=QCheckBox('오디오 비주얼라이저');reactive.setChecked(d['audioReactive']);reactive.toggled.connect(lambda value:self.b.set_option('audioReactive',value));v.addWidget(reactive)
         motion=QCheckBox('애니메이션');motion.setChecked(d['motion']);motion.toggled.connect(lambda x:self.b.set_option('motion',x));v.addWidget(motion)
@@ -126,9 +133,11 @@ class Settings(QDialog):
         except OSError as e:QMessageBox.warning(self,'자동 실행',str(e))
     def media(self):
         w,v=page('바탕화면 배경',scroll=False)
+        quality=QComboBox();quality.addItems(['4K 고화질','화면 해상도']);quality.setCurrentIndex(0 if self.b.store.data.get('wallpaperQuality','4k')=='4k' else 1);quality.currentIndexChanged.connect(lambda i:self.b.set_option('wallpaperQuality','4k' if i==0 else 'native'));v.addWidget(quality)
+
         preview,pv=card();self.wallpaper_preview=AspectPreview();self.wallpaper_preview.setAlignment(Qt.AlignmentFlag.AlignCenter);self.wallpaper_preview.setMinimumSize(300,130);self.wallpaper_preview.setMaximumHeight(210);self.wallpaper_preview.setStyleSheet('background:#e7eeea;border-radius:12px;');pv.addWidget(self.wallpaper_preview,1)
         self.background_name=label('','sub');pv.addWidget(self.background_name);v.addWidget(preview,1)
-        choices=QHBoxLayout();choices.addWidget(FileDropZone('바탕화면 사진 선택','',self.add_wallpaper_paths,{'.jpg','.jpeg','.png','.webp','.bmp'},True));choices.addWidget(FileDropZone('바탕화면 영상 선택','',lambda paths:self.set_background(paths[0],True),{'.mp4','.webm','.mov','.mkv'}));v.addLayout(choices)
+        choices=QHBoxLayout();choices.addWidget(FileDropZone('바탕화면 사진 선택','',lambda paths:self.b.importBackground(paths,False),{'.jpg','.jpeg','.png','.webp','.bmp'},True));choices.addWidget(FileDropZone('바탕화면 영상 선택','',lambda paths:self.b.importBackground(paths,True),{'.mp4','.webm','.mov','.mkv'}));v.addLayout(choices)
         row=QHBoxLayout();row.addWidget(label('화면 맞춤'));self.wallpaper_fit=QComboBox();self.wallpaper_fit.addItems(['채우기','맞추기']);self.wallpaper_fit.setCurrentIndex(0 if self.b.store.data.get('wallpaperFit','fill')=='fill' else 1);self.wallpaper_fit.currentIndexChanged.connect(lambda i:self.change_wallpaper_fit(['fill','fit'][i]));row.addWidget(self.wallpaper_fit,1);row.addWidget(button('바탕화면에 적용',self.apply_desktop,True));v.addLayout(row)
         control=QHBoxLayout();self.wallpaper_rotation=ToggleSwitch('사진 순환');self.wallpaper_rotation.setChecked(self.b.store.data['wallpaperRotation']);self.wallpaper_rotation.toggled.connect(lambda enabled:self.b.set_option('wallpaperRotation',enabled));control.addWidget(self.wallpaper_rotation);control.addStretch();control.addWidget(button('위로',lambda:self.move_wallpaper(-1)));control.addWidget(button('아래로',lambda:self.move_wallpaper(1)));control.addWidget(button('삭제',self.remove_wallpaper));v.addLayout(control)
         self.wallpaper_list=QListWidget();self.wallpaper_list.setMinimumHeight(150);self.wallpaper_list.setSpacing(5);v.addWidget(self.wallpaper_list,1);self.refresh_wallpaper_list()
@@ -236,7 +245,7 @@ class Settings(QDialog):
         color=choose_color(QColor(self.b.store.data['widgets'][key].get('color') or '#f2f7fb'),self,NAMES[key]+' 색상')
         if color.isValid():self.b.setWidgetColor(key,color.name())
     def reset_colors(self):
-        self.b.store.data['widgetColor']='';self.b.store.data['accentColor']='#86b8d6'
+        self.b.store.data['widgetColor']='';self.b.store.data['accentColor']='#edb8b4'
         for row in self.b.store.data['widgets'].values():row['color']=''
         self.b.changed()
     def visibility(self,key,value):self.b.store.data['widgets'][key]['visible']=value;self.b.changed()

@@ -17,7 +17,7 @@ def test_dark_theme_preserves_custom_colors_and_switches_player(tmp_path,qt_appl
     b.set_option('widgetColor','#bde0cd');assert b.appearance()['calendar']['solid']=='#bde0cd'
     b.set_option('nightLighting',True);b.persist();restored=Store(tmp_path)
     assert restored.data['nightLighting'] and restored.data['widgets']['memo']['color']=='#fad1d9'
-    b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close()
+    b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close()
 
 def test_palette_wheel_has_no_slider_and_mouse_changes_hue(qt_application):
     from panel_ui import PaletteDialog
@@ -33,7 +33,7 @@ def test_native_photo_night_dim_changes_file_and_restores_day(tmp_path,qt_applic
     from PySide6.QtGui import QImage
     from backend import Bridge
     source=tmp_path/'white.png';image=QImage(24,24,QImage.Format_RGB32);image.fill(QColor('white'));image.save(str(source))
-    b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');b.wallpaper_size=(24,24)
+    b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');b.wallpaper_size=(24,24);b.store.data['wallpaperQuality']='native'
     try:
         b.store.data.update(backgroundMode='image',imageBackground=str(source),background=str(source),dim=0,nightLighting=True)
         import backend
@@ -43,13 +43,19 @@ def test_native_photo_night_dim_changes_file_and_restores_day(tmp_path,qt_applic
             @classmethod
             def now(cls):return SimpleNamespace(hour=cls.hour)
         monkeypatch.setattr(backend,'datetime',Clock)
-        night=b.wallpaper_path();assert QImage(str(night)).pixelColor(12,12).red()<210
+        def rendered():
+            b.wallpaper_path()
+            for _ in range(150):
+                QTest.qWait(10)
+                if b._wallpaper_cache_key==b._wallpaper_request:return b.wallpaper_path()
+            raise AssertionError('Wallpaper did not finish')
+        night=rendered();assert QImage(str(night)).pixelColor(12,12).red()<210
         Clock.hour=12
-        day=b.wallpaper_path();assert day!=night and QImage(str(day)).pixelColor(12,12).red()==255
+        day=rendered();assert day!=night and QImage(str(day)).pixelColor(12,12).red()==255
         b.store.data['nightLighting']=False;Clock.hour=22
         assert b.wallpaper_path()==day
     finally:
-        b.slides.stop();b.midnight.stop();b.debounce.stop();b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();b.deleteLater();QTest.qWait(10)
+        b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();b.deleteLater();QTest.qWait(10)
 
 
 def test_weather_is_removed_from_old_settings():

@@ -80,3 +80,11 @@ Windows 실제 장치에서 재생 제어, 스피커 출력 캡처, GPU 및 체�
 
 ## 1.6.2
 Removed weather UI, location preferences, weather service and its QML card. Existing persisted weather settings are discarded by state validation. Night lighting uses only PC time (19:00–07:00). Regression tests cover legacy weather settings removal, custom colors, palette mouse input and native night/day wallpaper restoration.
+
+
+## 1.7.0
+- Full Linux/offscreen suite: 134 passed; follow-up shell/theme/atomic-image checks: 8 passed.
+- New tests exercise ordered app search, bounded file fallback, quality/preferences validation, original byte preservation, 3840×2160 output, GUI timer responsiveness during import/render, search opening and selection, custom-color preservation and asynchronous night/day background changes.
+- Native guardian CI smoke test checks stop-event and parent-death exits using a hidden STATIC window. It does not hide a taskbar or intercept keyboard input.
+- Native Win-key capture/Win combinations, actual Explorer taskbar restoration, Store-app identity and Windows Search result availability require physical Windows checks; no claim that those inputs were simulated on Linux.
+- Local QML scene and separate dock/search/settings rendered without QML errors.

@@ -19,7 +19,7 @@ def panel(tmp_path):
     b=Bridge(Store(tmp_path),Path(__file__).resolve().parents[1]/'assets')
     p=Settings(b,app);p.resize(1220,840);p.show();QTest.qWait(30)
     yield p
-    b.persist();b.slides.stop();b.midnight.stop();b.debounce.stop();b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();p.close();p.deleteLater();b.deleteLater();QTest.qWait(10)
+    b.persist();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.update_prompt.close();b.updates.close();p.close();p.deleteLater();b.deleteLater();QTest.qWait(10)
 
 def test_shortcuts_modes_search_edit_and_save(panel):
     p=panel;p.show_section(4);assert not p.link_save.isEnabled()

@@ -1,3 +1,4 @@
+import shutil
 """Reproducible per-user runtime and installer build on Windows CI."""
 from pathlib import Path
 import hashlib,subprocess,sys,urllib.request,zipfile,os
@@ -19,7 +20,10 @@ launcher=ROOT/'distribution/launcher'
 subprocess.run(['rc','/nologo','/fo',str(WORK/'launcher.res'),'launcher.rc'],cwd=launcher,check=True)
 subprocess.run(['cl','/nologo','/utf-8','/O2','launcher.c',str(WORK/'launcher.res'),'user32.lib','/Fe:'+str(WORK/'HanroroWidget.exe'),'/link','/SUBSYSTEM:WINDOWS'],cwd=launcher,check=True)
 subprocess.run(['cl','/nologo','/utf-8','/O2','close_widget.c','user32.lib','advapi32.lib','shell32.lib','ole32.lib','uuid.lib','bcrypt.lib','/Fe:CloseHanroro.exe','/link','/SUBSYSTEM:WINDOWS'],cwd=ROOT/'distribution/installer',check=True)
+subprocess.run(['cl','/nologo','/utf-8','/O2','shell.c','user32.lib','/Fe:'+str(WORK/'HanroroShell.exe')],cwd=ROOT/'distribution/shell',check=True)
+subprocess.run([sys.executable,str(ROOT/'distribution/shell/smoke.py'),str(WORK/'HanroroShell.exe')],check=True,timeout=20)
 subprocess.run([sys.executable,str(ROOT/'distribution/package_runtime.py'),'--runtime',str(RUNTIME),'--output',str(PAYLOAD),'--launcher',str(WORK/'HanroroWidget.exe')],check=True)
+shutil.copy2(WORK/'HanroroShell.exe',PAYLOAD/'_internal/HanroroShell.exe')
 env=os.environ.copy();env['QT_QPA_PLATFORM']='offscreen';env['QT_QUICK_BACKEND']='software'
 subprocess.run([str(PAYLOAD/'_internal/python.exe'),str(PAYLOAD/'_internal/main.py'),'--smoke-run','--preview','--data-dir',str(WORK/'smoke-data')],cwd=PAYLOAD/'_internal',env=env,check=True,timeout=60)
 output=ROOT/'release/HanroroWidget_Setup_x64.exe';output.parent.mkdir(exist_ok=True)

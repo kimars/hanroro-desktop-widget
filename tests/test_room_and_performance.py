@@ -87,7 +87,7 @@ def test_decorative_pixels_remain_painted_but_do_not_capture_input(tmp_path):
         assert b._interactive_region.contains(QPoint(230,40))
         b.hitRegions([{'x':10,'y':10,'w':100,'h':100,'paintOnly':False},{'x':200,'y':10,'w':100,'h':100}])
         assert b._interactive_region.contains(QPoint(40,40)) and len(masks)==2
-    finally:b.desktop=False;b.overlay=None;b.media.close();b.telemetry_link.close();b.features_controller.close();b.writer.close()
+    finally:b.desktop=False;b.overlay=None;b.media.close();b.telemetry_link.close();b.features_controller.close();b.media_importer.close();b.wallpaper_cache.close();b.writer.close()
 
 
 def test_decoration_scene_regions_include_locked_items_and_rotation(tmp_path):
@@ -112,7 +112,7 @@ def test_layout_updates_do_not_refresh_wallpaper_or_rebuild_other_widgets(tmp_pa
         b.addFurniture('chair');resets=QSignalSpy(b.room_model.modelReset);changed=QSignalSpy(b.room_model.dataChanged);identity=b.store.data['decorations'][0]['id']
         for index in range(100):b.moveDecoration(identity,500+index,400)
         assert resets.count()==0 and changed.count()==100
-    finally:b.media.close();b.telemetry_link.close();b.features_controller.close();b.writer.close()
+    finally:b.media.close();b.telemetry_link.close();b.features_controller.close();b.media_importer.close();b.wallpaper_cache.close();b.writer.close()
 
 
 def test_portable_autostart_uses_current_launcher(tmp_path,monkeypatch):
@@ -127,4 +127,4 @@ def test_portable_autostart_uses_current_launcher(tmp_path,monkeypatch):
     try:
         monkeypatch.setattr(backend.sys,'platform','win32');monkeypatch.setattr(backend.sys,'executable',str(folder/'_internal/pythonw.exe'));monkeypatch.setitem(sys.modules,'winreg',registry)
         b.set_autostart(True);assert str(launcher) in values[0] and 'pythonw' not in values[0]
-    finally:b.media.close();b.telemetry_link.close();b.features_controller.close();b.writer.close()
+    finally:b.media.close();b.telemetry_link.close();b.features_controller.close();b.media_importer.close();b.wallpaper_cache.close();b.writer.close()

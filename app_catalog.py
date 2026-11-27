@@ -1,10 +1,13 @@
 """Windows Start menu/AppUserModelID inventory. Never interpolates names into commands."""
 from pathlib import Path
-import json,os,subprocess,sys
+import json,os,subprocess,sys,threading,time
+_cache=[]
+_cache_time=0
+_cache_lock=threading.Lock()
 
 SCRIPT=r'''[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); Get-StartApps | Select-Object Name,AppID | ConvertTo-Json -Compress'''
 
-def collect_apps(runner=subprocess.run,environment=None,force=False):
+def _collect_apps(runner=subprocess.run,environment=None,force=False):
     if sys.platform!='win32' and not force:return []
     env=os.environ if environment is None else environment
     rows=[]
@@ -37,3 +40,11 @@ def collect_apps(runner=subprocess.run,environment=None,force=False):
 def app_shell_target(identifier):
     if not identifier or len(identifier)>2048 or any(c in identifier for c in '\r\n\0'):raise ValueError('올바른 앱 식별자가 아닙니다.')
     return 'shell:AppsFolder\\'+identifier
+
+
+def collect_apps(runner=subprocess.run,environment=None,force=False):
+    global _cache,_cache_time
+    if force or environment is not None or runner is not subprocess.run:return _collect_apps(runner,environment,force)
+    with _cache_lock:
+        if _cache_time and time.monotonic()-_cache_time<300:return [dict(r) for r in _cache]
+        _cache=_collect_apps(runner,environment,force);_cache_time=time.monotonic();return [dict(r) for r in _cache]

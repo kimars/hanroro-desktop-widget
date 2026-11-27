@@ -75,7 +75,7 @@ def test_update_settings_and_restart_switch(tmp_path):
         source=(Path(__file__).resolve().parents[1]/'distribution/installer/build_installer.py').read_text()
         assert '/AUTOUPDATE' in source and 'Function .onInstSuccess' in source
     finally:
-        b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.writer.close();p.close();p.deleteLater()
+        b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();p.close();p.deleteLater()
 
 
 def test_probe_uses_head_and_skips_rest_when_version_is_current(monkeypatch):

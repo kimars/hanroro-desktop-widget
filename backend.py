@@ -13,6 +13,8 @@ from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QFileDialog,QMessageBox,QApplication
 from state import Store,WIDGETS,WIDGET_SIZES,layout_for
 from wallpaper import render_wallpaper
+from wallpaper_cache import WallpaperCache,output_size
+from media_import import MediaImporter
 from app_catalog import app_shell_target
 from font_config import ui_family
 from media_link import MediaLink
@@ -26,12 +28,15 @@ from room_items import CATALOG,normalize_item
 
 log=logging.getLogger(__name__)
 class Bridge(QObject):
+    mediaImported=Signal()
     updateNoticeChanged=Signal()
     decorationsChanged=Signal();dragActivity=Signal();layoutChanged=Signal();audioChanged=Signal();featureChanged=Signal();telemetryChanged=Signal()
     stateChanged=Signal();photoChanged=Signal();musicChanged=Signal();pausedChanged=Signal()
     memoChanged=Signal();inputChanged=Signal();memoInputRequested=Signal();editChanged=Signal();toast=Signal(str);requestRestore=Signal();requestSection=Signal(int);requestShowDesktop=Signal();requestSettings=Signal();requestMemo=Signal();requestEvents=Signal();requestDesktop=Signal();requestPreview=Signal()
     def __init__(self,store,assets):
         super().__init__();self.store=store;self.assets=Path(assets);self.views=[];self.overlay=None;self.desktop=False
+        self.media_importer=MediaImporter(store,self);self.media_importer.finished.connect(self.background_imported)
+        self.wallpaper_cache=WallpaperCache(self);self.wallpaper_cache.ready.connect(self.wallpaper_ready);self.wallpaper_cache.failed.connect(self.wallpaper_failed);self._wallpaper_request=None;self._wallpaper_failed=None
         self._state_cache=None;self._wallpaper_cache_key=None;self._wallpaper_cache_path=None;self._region_key=None;self._interactive_region=QRegion()
         self._input=False;self._edit=False;self._paused=False;self._settings=None;self.wallpaper_size=(1920,1080)
         self.updates=Updater(store.directory,Path(__file__).resolve().parent/'main.py',self);self.updates.notice.connect(self.toast)
@@ -215,8 +220,8 @@ class Bridge(QObject):
     def appearance(self):
         d=self.store.data;night=d['theme']=='night';out={}
         for key,row in d['widgets'].items():
-            base=row.get('color') or d['widgetColor'] or ('#24313d' if night else '#f2f7fb')
-            if key=='player' and not night and not row.get('color') and not d['widgetColor']:base='#f1eee7'
+            base=row.get('color') or d['widgetColor'] or ('#24313d' if night else {'memo':'#fff3df','calendar':'#fff7ee','dock':'#edf5ff','focus':'#f7ecec'}.get(key,'#fff9f0'))
+            if key=='player' and not night and not row.get('color') and not d['widgetColor']:base='#fff8ed'
             color=QColor(base);light=(color.redF()*.2126+color.greenF()*.7152+color.blueF()*.0722)>.56
             ink='#233441' if light else '#f3f7fb';muted='#657b8c' if light else '#bacbd8'
             color.setAlphaF(d['widgetOpacity'])
@@ -378,14 +383,37 @@ class Bridge(QObject):
     def night_active(self):
         if not self.store.data.get('nightLighting'):return False
         return datetime.now().hour>=19 or datetime.now().hour<7
+    def importBackground(self,paths,video=False):
+        if not self.media_importer.submit(paths,video):self.toast.emit('배경 파일을 가져오는 중입니다.')
+    def background_imported(self,paths,video,error):
+        self.media_importer.busy=False
+        if error:self.toast.emit(error)
+        if not paths:return
+        d=self.store.data
+        if video:d['videoBackground']=paths[0];d['backgroundMode']='video'
+        else:
+            rows=d['wallpaperSlides']
+            for path in paths:
+                if len(rows)<200 and not any(r['path']==path for r in rows):rows.append({'path':path,'seconds':30})
+            d['imageBackground']=paths[-1];d['backgroundMode']='image';d['wallpaperRotation']=len(rows)>1
+        self.wallpaper_slides_changed();self.mediaImported.emit()
+    def wallpaper_ready(self,key,path):
+        if key!=self._wallpaper_request:return
+        self._wallpaper_cache_key=key;self._wallpaper_cache_path=Path(path);self.refresh_state()
+    def wallpaper_failed(self,key,message):
+        if key==self._wallpaper_request:self._wallpaper_failed=key;self.toast.emit('배경 처리 실패: '+message)
     def wallpaper_path(self):
         d=self.store.data;source=self.active_wallpaper();dim=min(.85,1-(1-d['dim'])*(1-(.22 if self.night_active() else 0)))
-        key=(source,d['theme'],dim,self.wallpaper_size,d.get('wallpaperFit','fill'))
-        if key==self._wallpaper_cache_key:return self._wallpaper_cache_path
         if not Path(source).is_file():source=str(self.assets/'photos/photo1.jpg')
-        path=render_wallpaper(source,self.store.directory/'wallpapers',d['theme'],dim,self.wallpaper_size,d.get('wallpaperFit','fill'))
-        self._wallpaper_cache_key=key;self._wallpaper_cache_path=path
-        return path
+        size=output_size(self.wallpaper_size,d.get('wallpaperQuality','4k'))
+        try:stamp=Path(source).stat().st_mtime_ns
+        except OSError:stamp=0
+        key=(source,stamp,d['theme'],dim,size,d.get('wallpaperFit','fill'))
+        if key==self._wallpaper_cache_key:return self._wallpaper_cache_path
+        if key!=self._wallpaper_request and key!=self._wallpaper_failed:
+            self._wallpaper_request=key;self.wallpaper_cache.submit(key,(source,self.store.directory/'wallpapers',d['theme'],dim,size,d.get('wallpaperFit','fill')))
+        # Original stays visible while the lossless 4K file is prepared off the UI thread.
+        return self._wallpaper_cache_path if self._wallpaper_cache_key and self._wallpaper_cache_key[0]==source else Path(source)
     @Slot()
     def restoreBackground(self):self.requestRestore.emit()
     @Slot()

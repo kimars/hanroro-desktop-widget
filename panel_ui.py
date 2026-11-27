@@ -6,12 +6,12 @@ from PySide6.QtWidgets import (QWidget,QFrame,QVBoxLayout,QHBoxLayout,QLabel,QPu
 ASSETS=Path(__file__).resolve().parent/'assets'
 STYLE='''
 QWidget {background:transparent;color:#26383c;font-size:13px;}
-QDialog#settingsWindow {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #f1f5f3,stop:0.55 #f7f9f7,stop:1 #edf3f1);}
+QDialog#settingsWindow {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #fff8ef,stop:0.55 #fffdf8,stop:1 #eef6ff);}
 QDialog {background:#f4f7f5;}
-QFrame#sidebar {background:qlineargradient(x1:0,y1:0,x2:0.5,y2:1,stop:0 #253638,stop:1 #304749);border:1px solid #405b5b;border-radius:22px;}
+QFrame#sidebar {background:qlineargradient(x1:0,y1:0,x2:0.5,y2:1,stop:0 #3c536b,stop:1 #496581);border:1px solid #405b5b;border-radius:22px;}
 QLabel#sidebarTitle {color:white;font-size:25px;font-weight:500;}
 QLabel#sidebarHint {color:#b7cac7;font-size:11px;}
-QLabel#heading {font-size:29px;font-weight:500;color:#253638;}
+QLabel#heading {font-size:29px;font-weight:500;color:#3c536b;}
 QLabel#sub {color:#7b9295;font-size:12px;}
 QLabel#cardTitle {font-size:15px;font-weight:500;color:#2d4245;}
 QLabel#eyebrow {color:#678b89;font-size:11px;font-weight:500;}
@@ -19,12 +19,12 @@ QLabel#fieldLabel {color:#5e777a;font-size:12px;font-weight:400;}
 QFrame#card {background:#ffffff;border:1px solid #dde7e3;border-radius:19px;}
 QFrame#previewCard {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #eaf2ee,stop:1 #edf4f2);border:1px solid #d9e7e1;border-radius:16px;}
 QLabel#statusPill {background:#e4eeea;color:#527b79;border-radius:12px;padding:6px 11px;font-size:11px;}
-QPushButton,QToolButton {background:#eaf0ed;color:#47686b;border:1px solid #dce7e2;border-radius:11px;padding:9px 14px;min-height:18px;font-weight:400;}
+QPushButton,QToolButton {background:#fff0ed;color:#47686b;border:1px solid #dce7e2;border-radius:11px;padding:9px 14px;min-height:18px;font-weight:400;}
 QPushButton:hover,QToolButton:hover {background:#dfeae5;color:#294f51;border-color:#b8d0c7;}
 QPushButton:pressed,QToolButton:pressed {background:#d0e2da;}
 QPushButton:focus,QToolButton:focus {border:1px solid #84aaa0;outline:none;}
 QPushButton:disabled {color:#a5b6b1;background:#eff3f0;border-color:#e5ece7;}
-QPushButton#primary {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #527a77,stop:1 #29474a);color:white;border:1px solid #527873;font-weight:500;}
+QPushButton#primary {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #a66f78,stop:1 #7d5a68);color:white;border:1px solid #527873;font-weight:500;}
 QPushButton#primary:hover {background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #658d86,stop:1 #365a5a);border-color:#8aaba2;}
 QPushButton#primary:pressed {background:#29484b;}
 QPushButton#primary:disabled {background:#e6ede8;color:#a0b3aa;border:1px solid #dce7df;}
@@ -34,7 +34,7 @@ QPushButton[segment="true"] {background:transparent;border:0;color:#82958f;borde
 QPushButton[segment="true"]:checked {background:#dfece6;color:#426d67;}
 QToolButton#iconChoice {background:#f0f5f1;border:1px solid transparent;border-radius:10px;padding:9px;}
 QToolButton#iconChoice:checked {background:#d7e9df;border-color:#82a897;}
-QLineEdit,QPlainTextEdit,QComboBox,QSpinBox,QDoubleSpinBox {background:#f7f9f7;color:#354c4d;border:1px solid #dce6e0;border-radius:10px;padding:9px 12px;selection-background-color:#bbd8cb;selection-color:#2e5652;}
+QLineEdit,QPlainTextEdit,QComboBox,QSpinBox,QDoubleSpinBox {background:#fffdf8;color:#354c4d;border:1px solid #dce6e0;border-radius:10px;padding:9px 12px;selection-background-color:#bbd8cb;selection-color:#2e5652;}
 QLineEdit:focus,QPlainTextEdit:focus,QComboBox:focus {border-color:#89ad9c;background:#fff;}
 QComboBox {min-height:19px;padding-right:30px;}
 QComboBox::drop-down {width:28px;border:0;background:transparent;}

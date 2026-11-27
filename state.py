@@ -47,7 +47,7 @@ DEFAULT_LINKS = [
     {'title':'버튼 관리','target':'action:shortcuts','glyph':'app'},
 ]
 DEFAULT = {
-    'version': 4, 'nightLighting':False, 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
+    'version': 4, 'macDock':True, 'dockAutoHide':True, 'hideTaskbar':False, 'winKeySearch':False, 'wallpaperQuality':'4k', 'nightLighting':False, 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
     'imageBackground': '', 'videoBackground': '', 'wallpaperSlides': [], 'wallpaperRotation': False, 'screen': '', 'motion': True, 'fps': 30, 'photoInterval': 30,
     'wallpaperFit':'fill','mediaSource':'', 'dim': .0, 'volume': .6, 'slideshow': True,
     'widgets': WIDGETS, 'photos': [], 'playlist': [], 'memo': '',
@@ -55,7 +55,7 @@ DEFAULT = {
     'layoutRevision':4, 'layoutPreset':'left','hideDesktopIcons':True,'fontPreset':'round',
     'focusTimer':{'minutes':25,'phase':'focus','remaining':1500,'deadline':0,'finished':False,'alarmMode':'bell','alarmFile':'','alarmVolume':.65},
     'decorations':[], 'audioReactive':True, 'updatesAutoCheck':True, 'updatesAutoInstall':False,
-    'widgetColor':'','accentColor':'#86b8d6','widgetOpacity':.9,
+    'widgetColor':'','accentColor':'#edb8b4','widgetOpacity':.9,
 }
 
 def validate(data):
@@ -72,7 +72,7 @@ def validate(data):
         if data.get(key) in options: out[key] = 'image' if key=='backgroundMode' and data[key]=='room' else data[key]
     for key in ('background','imageBackground','videoBackground','screen','memo','mediaSource'):
         if isinstance(data.get(key),str): out[key] = data[key][:20000]
-    for key in ('nightLighting','motion','slideshow','wallpaperRotation','hideDesktopIcons','audioReactive','updatesAutoCheck','updatesAutoInstall'):
+    for key in ('macDock','dockAutoHide','hideTaskbar','winKeySearch','nightLighting','motion','slideshow','wallpaperRotation','hideDesktopIcons','audioReactive','updatesAutoCheck','updatesAutoInstall'):
         if isinstance(data.get(key),bool): out[key] = data[key]
     for name,lo,hi,cast in [('fps',15,60,int),('photoInterval',5,3600,int),('volume',0,1,float),('widgetOpacity',.35,1,float),('dim',0,.85,float),('selectedTrack',0,10000,int),('photoIndex',0,10000,int)]:
         number(name,lo,hi,cast)
@@ -126,10 +126,11 @@ def validate(data):
     for link in out['links']:
 
         if link.get('target')=='action:music' and link.get('title')=='음악 추가':link['title']='재생 앱 연결'
-    for key,options in [('wallpaperFit',('fill','fit')),('fontPreset',('round','clean','soft')),('layoutPreset',('left','right','bottom'))]:
+    for key,options in [('wallpaperQuality',('native','4k')),('wallpaperFit',('fill','fit')),('fontPreset',('round','clean','soft')),('layoutPreset',('left','right','bottom'))]:
         if data.get(key) in options:out[key]=data[key]
     for key in ('widgetColor','accentColor'):
         if isinstance(data.get(key),str) and re.fullmatch(r'#[0-9a-fA-F]{6}',data[key]):out[key]=data[key]
+    if data.get('accentColor')=='#86b8d6':out['accentColor']='#edb8b4'
     for key,default in WIDGETS.items():
         row=data.get('widgets',{}).get(key,{}) if isinstance(data.get('widgets'),dict) else {}
         if not isinstance(row,dict): continue
