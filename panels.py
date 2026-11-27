@@ -483,7 +483,7 @@ class Settings(QDialog):
         self.update_progress=QProgressBar();self.update_progress.setRange(0,100);v.addWidget(self.update_progress)
         row=QHBoxLayout();self.update_check=button('업데이트 확인',self.b.updates.check);row.addWidget(self.update_check);self.update_apply=button('업데이트',self.apply_update,True);row.addWidget(self.update_apply);self.update_cancel=button('취소',self.b.updates.cancel);row.addWidget(self.update_cancel);v.addLayout(row)
         self.update_auto_check=QCheckBox('새 버전 자동 확인');self.update_auto_check.setChecked(self.b.store.data['updatesAutoCheck']);self.update_auto_check.toggled.connect(lambda active:self.b.set_option('updatesAutoCheck',active));v.addWidget(self.update_auto_check)
-        self.update_auto_install=QCheckBox('자동 다운로드 · 설치');self.update_auto_install.setChecked(self.b.store.data['updatesAutoInstall']);self.update_auto_install.setToolTip('알림 후 15초 뒤 설치합니다. 입력·배치 편집 중에는 기다립니다.');self.update_auto_install.toggled.connect(self.set_auto_install);self.update_auto_check.setEnabled(not self.update_auto_install.isChecked());v.addWidget(self.update_auto_install);v.addWidget(button('알림 미리보기',self.b.previewUpdateNotice));v.addStretch();self.b.updates.changed.connect(self.refresh_update);self.refresh_update();self.add(w)
+        self.update_auto_install=QCheckBox('자동 다운로드 · 설치');self.update_auto_install.setChecked(self.b.store.data['updatesAutoInstall']);self.update_auto_install.setToolTip('알림 후 15초 뒤 설치합니다. 입력·배치 편집 중에는 기다립니다.');self.update_auto_install.toggled.connect(self.set_auto_install);self.update_auto_check.setEnabled(not self.update_auto_install.isChecked());v.addWidget(self.update_auto_install);v.addWidget(button('알림 미리보기',self.b.previewUpdateNotice));self.auto_diagnostic=label('','sub');self.auto_diagnostic.setWordWrap(True);v.addWidget(self.auto_diagnostic);v.addStretch();self.b.updates.changed.connect(self.refresh_update);self.refresh_update();self.add(w)
     def set_auto_install(self,active):
         self.b.set_option('updatesAutoInstall',active)
         self.update_auto_check.setEnabled(not active)
@@ -492,6 +492,8 @@ class Settings(QDialog):
         if self.b.updates.data['status']=='ready':self.b.updates.install()
         else:self.b.updates.download()
     def refresh_update(self):
+        updater=self.b.updates
+        self.auto_diagnostic.setText(('자동 확인 '+updater.auto_checked+'  '+(updater.auto_error or '완료')) if updater.auto_checked else ('자동 확인 대기 중' if self.b.store.data['updatesAutoCheck'] else '자동 확인 꺼짐'))
         data=self.b.updates.data;status=data['status'];busy=status in ('checking','downloading','installing')
         text={'idle':'새 버전을 확인할 수 있어요.','checking':'새 버전 확인 중…','current':'최신 버전입니다.','available':'새 버전 '+data.get('version','')+'이 있어요.','downloading':'업데이트 다운로드 중…','ready':'설치 준비가 끝났습니다.','installing':'설치 후 앱이 다시 실행됩니다.','error':data.get('message','업데이트 확인에 실패했습니다.')}
         self.update_status.setText(text.get(status,''));self.update_progress.setVisible(status in ('downloading','ready','installing'));self.update_progress.setValue(data.get('progress',0));

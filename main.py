@@ -221,6 +221,11 @@ class Program:
                 self.host.attach_widgets(int(self.overlay.winId()));self.bridge.toast.emit('영상 배경 연결 실패. 사진 배경을 유지합니다.')
         QMetaObject.invokeMethod(self.overlay.rootObject(),'updateRegions');self.host.sync_overlay();self.sync_icons()
         logging.info('Desktop ready; wallpaper job runs independently')
+    def reserve_shell_space(self,active,top=0):
+        if not self.overlay:return
+        rect=self.screen.availableGeometry()
+        if active:rect.setBottom(min(rect.bottom(),max(rect.top()+300,int(top)-8)))
+        if self.overlay.geometry()!=rect:self.overlay.setGeometry(rect)
     def input_changed(self):
         if self.bridge.desktop and self.overlay:
             self.host.set_input_active(self.bridge.inputActive)
@@ -242,7 +247,7 @@ class Program:
         if self.bridge.desktop:
             if not self.host.alive():
                 self.bridge.toast.emit('바탕화면 재연결');self.desktop();return
-            self.host.sync_overlay()
+            self.host.sync_overlay();self.host.sync_auxiliary()
             self.bridge.set_paused(getattr(self,'manual_pause',False) or self.host.fullscreen_app(self.screen))
         else:self.bridge.set_paused(getattr(self,'manual_pause',False))
     def render(self):

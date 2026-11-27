@@ -17,6 +17,8 @@ Item {
     readonly property bool surfaceActive:Window.window!==null && Window.window.visible
     readonly property bool moving:s.motion&&!bridge.backgroundPaused&&!bridge.editMode&&surfaceActive
     readonly property bool nightActive:s.nightLighting&&(now.getHours()>=19||now.getHours()<7)
+    onWidthChanged:scheduleRegions()
+    onHeightChanged:scheduleRegions()
     property date now:new Date()
     property bool videoFailed:false
     property string selectedDecoration:""
@@ -78,7 +80,7 @@ Item {
         MusicCard {id:player;objectName:"musicCard";visible:cfg.visible&&scene.fg;moving:scene.moving}
         MemoCard {id:memo;objectName:"memoCard";visible:cfg.visible&&scene.fg;available:scene.fg&&scene.surfaceActive}
         CalendarCard {id:calendar;visible:cfg.visible&&scene.fg;now:scene.now}
-        LauncherCard {id:dock;objectName:"launcherCard";visible:cfg.visible&&scene.fg&&(!s.macDock||scene.layerRole==="preview")}
+        LauncherCard {id:dock;objectName:"launcherCard";visible:cfg.visible&&scene.fg}
         SystemCard {id:systemMonitor;objectName:"systemCard";visible:cfg.visible&&scene.fg}
         FocusCard {id:focusTimer;objectName:"focusCard";visible:cfg.visible&&scene.fg}
         Item {id:tools;x:1348;y:804;width:198;height:48;visible:scene.fg

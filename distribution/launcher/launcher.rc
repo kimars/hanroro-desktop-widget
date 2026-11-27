@@ -3,8 +3,8 @@
 1 ICON "../../assets/icon.ico"
 1 RT_MANIFEST "launcher.manifest"
 1 VERSIONINFO
-FILEVERSION 1,7,0,0
-PRODUCTVERSION 1,7,0,0
+FILEVERSION 1,7,1,0
+PRODUCTVERSION 1,7,1,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0
 FILEOS VOS_NT_WINDOWS32
@@ -18,7 +18,7 @@ BEGIN
    VALUE "CompanyName", "마스\0"
    VALUE "LegalCopyright", "Copyright 마스\0"
    VALUE "ProductName", "한로로 바탕화면 위젯\0"
-   VALUE "FileVersion", "1.7.0.0\0"
+   VALUE "FileVersion", "1.7.1.0\0"
    VALUE "OriginalFilename", "HanroroWidget.exe\0"
   END
  END

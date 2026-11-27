@@ -78,37 +78,28 @@ def test_update_settings_and_restart_switch(tmp_path):
         b.updates.close();b.media.close();b.telemetry_link.close();b.features_controller.close();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();p.close();p.deleteLater()
 
 
-def test_probe_uses_head_and_skips_rest_when_version_is_current(monkeypatch):
-    from contextlib import contextmanager
-    calls=[]
-    class Response:
-        def geturl(self):return 'https://github.com/kimars/hanroro-desktop-widget/releases/tag/v'+VERSION
-        def __enter__(self):return self
-        def __exit__(self,*args):pass
-    class Opener:
-        def open(self,request,timeout):calls.append((request.get_method(),request.full_url));return Response()
-    monkeypatch.setattr(worker,'build_opener',lambda *a:Opener())
-    monkeypatch.setattr(worker,'release_info',lambda *a:pytest.fail('No REST call for same version'))
-    assert worker.probe('kimars/hanroro-desktop-widget',VERSION)=={'status':'unchanged'}
-    assert calls==[('HEAD','https://github.com/kimars/hanroro-desktop-widget/releases/latest')]
+def test_probe_and_manual_share_feed_without_rest(monkeypatch):
+    calls=[];data={'repository':'kimars/hanroro-desktop-widget','version':VERSION}
+    def read(url,limit):
+        calls.append(url);assert 'raw.githubusercontent.com' in url;return json.dumps(data).encode()
+    monkeypatch.setattr(worker,'limited_read',read)
+    assert worker.probe('kimars/hanroro-desktop-widget',VERSION)['status']=='unchanged'
+    assert worker.release_info('kimars/hanroro-desktop-widget',VERSION)['status']=='current'
+    assert len(calls)==2
 
 
-def test_probe_new_release_fetches_verified_metadata_and_rejects_other_repo(monkeypatch):
-    final=['https://github.com/kimars/hanroro-desktop-widget/releases/tag/v9.1.0']
-    class Response:
-        def geturl(self):return final[0]
-        def __enter__(self):return self
-        def __exit__(self,*args):pass
-    class Opener:
-        def open(self,*a,**kw):return Response()
-    monkeypatch.setattr(worker,'build_opener',lambda *a:Opener())
-    monkeypatch.setattr(worker,'limited_read',lambda *a:json.dumps(release()).encode())
-    assert worker.probe('kimars/hanroro-desktop-widget',VERSION)['status']=='available'
-    final[0]='https://github.com/other/repo/releases/tag/v9.1.0'
-    with pytest.raises(ValueError):worker.probe('kimars/hanroro-desktop-widget',VERSION)
-    req=worker.Request('https://github.com/kimars/hanroro-desktop-widget/releases/latest',method='HEAD')
-    redirected=worker.SecureRedirect().redirect_request(req,None,302,'Found',{},'https://github.com/kimars/hanroro-desktop-widget/releases/tag/v9.1.0')
-    assert redirected.get_method()=='HEAD'
+def test_feed_integrity_and_api_fallback(monkeypatch):
+    repository='kimars/hanroro-desktop-widget';data={'repository':repository,'version':'9.1.0','url':'https://github.com/'+repository+'/releases/download/v9.1.0/'+INSTALLER_ASSET,'size':120,'sha256':'a'*64}
+    monkeypatch.setattr(worker,'limited_read',lambda *a:json.dumps(data).encode())
+    assert worker.probe(repository,VERSION)['status']=='available'
+    data['url']='https://github.com/other/repo/releases/download/v9.1.0/'+INSTALLER_ASSET
+    with pytest.raises(ValueError):worker.validate_feed(data,repository,VERSION)
+    def fallback(url,limit):
+        if 'raw.githubusercontent.com' in url:raise OSError('Feed blocked')
+        return json.dumps(release()).encode()
+    monkeypatch.setattr(worker,'limited_read',fallback)
+    assert worker.probe(repository,VERSION)['status']=='available'
+    assert worker.probe(repository,VERSION)['channel']=='api'
 
 
 def test_background_probe_shows_desktop_notice_without_settings(tmp_path):

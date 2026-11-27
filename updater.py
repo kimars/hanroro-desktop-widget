@@ -1,4 +1,6 @@
-import hashlib,json,subprocess,sys,time
+import hashlib,json,subprocess,sys,time,logging
+from datetime import datetime
+log=logging.getLogger(__name__)
 from pathlib import Path
 from PySide6.QtCore import QObject,Signal,QProcess,QTimer
 from release_info import VERSION,UPDATE_REPOSITORY
@@ -7,14 +9,18 @@ class Updater(QObject):
     changed=Signal();available=Signal(str);notice=Signal(str)
     def __init__(self,directory,entry,parent=None):
         super().__init__(parent);self.directory=Path(directory)/'updates';self.entry=str(entry);self.process=None;self.buffer=b'';self.closed=False;self.last_message=0;self.install_after=False
-        self.probing=False;self.probe_failures=0;self.probe_after=0
+        self.probing=False;self.probe_failures=0;self.probe_after=0;self.received=False;self.stderr=b'';self.auto_status='';self.auto_checked='';self.auto_error=''
         self.handoff_timer=QTimer(self);self.handoff_timer.setInterval(1500);self.handoff_timer.timeout.connect(self.handoff_result)
         self.data={'status':'idle','version':VERSION,'current':VERSION,'progress':0,'message':'','notes':''}
         self.watch=QTimer(self);self.watch.setInterval(3000);self.watch.timeout.connect(self.watchdog)
     def publish(self,data):
-        if data.get('status')=='unchanged':self.probe_failures=0;self.probe_after=0;return
+        if self.probing:
+            self.auto_checked=datetime.now().strftime('%H:%M:%S');status=data.get('status','');self.auto_status=status
+            if status!='error':self.auto_error=''
+            if status=='available':log.info('Automatic update found %s via %s',data.get('version'),data.get('channel','worker'))
+        if data.get('status')=='unchanged':self.probe_failures=0;self.probe_after=0;self.changed.emit();return
         if self.probing and data.get('status')=='error':
-            self.probe_failures+=1;self.probe_after=time.monotonic()+min(900,60*2**min(self.probe_failures-1,4));return
+            self.probe_failures+=1;self.probe_after=time.monotonic()+min(900,60*2**min(self.probe_failures-1,4));self.auto_error=str(data.get('message','자동 확인 실패'));log.warning('Automatic update failed: %s',self.auto_error);self.changed.emit();return
         if data.get('status')=='available':self.probe_failures=0;self.probe_after=0
         self.data={**self.data,**data,'current':VERSION};self.changed.emit()
         if data.get('status')=='available':self.available.emit(data['version'])
@@ -35,14 +41,15 @@ class Updater(QObject):
         if self.closed or self.process:return
         self.probing=action=='probe'
         if not self.probing:self.publish({'status':'checking' if action=='check' else 'downloading','progress':0,'message':''})
-        self.buffer=b''
+        self.buffer=b'';self.stderr=b'';self.received=False
         p=QProcess();self.process=p;self.last_message=time.monotonic()
         current=self.data['version'] if self.probing and self.data['status']=='available' else VERSION
         request={'action':action,'repository':UPDATE_REPOSITORY,'current':current,'directory':str(self.directory)}
         def send():p.write((json.dumps(request)+'\n').encode());p.closeWriteChannel()
-        p.started.connect(send);p.readyReadStandardOutput.connect(self.read);p.readyReadStandardError.connect(lambda:p.readAllStandardError())
+        p.started.connect(send);p.readyReadStandardOutput.connect(self.read);p.readyReadStandardError.connect(lambda:self.read_error(p))
         p.finished.connect(lambda code,status:self.finished(p));p.errorOccurred.connect(lambda error:self.failed(p,'업데이트 확인을 시작하지 못했습니다.') if error==QProcess.ProcessError.FailedToStart else None)
         p.start(sys.executable,['--update-worker'] if getattr(sys,'frozen',False) else [self.entry,'--update-worker']);self.watch.start()
+    def read_error(self,p):self.stderr=(self.stderr+bytes(p.readAllStandardError()))[-4096:]
     def read(self):
         if not self.process:return
         self.buffer+=bytes(self.process.readAllStandardOutput())
@@ -52,12 +59,14 @@ class Updater(QObject):
             try:data=json.loads(line)
             except ValueError:continue
             if not isinstance(data,dict):continue
-            self.last_message=time.monotonic();self.publish(data)
+            self.received=True;self.last_message=time.monotonic();self.publish(data)
     def finished(self,p):
         if self.process is not p:return
         self.read();self.process=None;self.watch.stop();p.deleteLater()
         if self.data['status']=='ready' and self.install_after:self.install_after=False;QTimer.singleShot(0,self.install)
-        if self.probing:self.probing=False;return
+        if self.probing:
+            if not self.received:self.publish({'status':'error','message':'업데이트 확인 프로세스가 응답 없이 종료됐습니다. '+self.stderr.decode('utf-8','replace')[-200:]})
+            self.probing=False;return
         if self.data['status'] in ('checking','downloading'):self.publish({'status':'error','message':'업데이트 연결이 끊겼습니다. 다시 확인해주세요.'})
     def failed(self,p,message):
         if self.process is p:self.stop();self.publish({'status':'error','message':message});self.probing=False

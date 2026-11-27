@@ -47,7 +47,7 @@ DEFAULT_LINKS = [
     {'title':'버튼 관리','target':'action:shortcuts','glyph':'app'},
 ]
 DEFAULT = {
-    'version': 4, 'macDock':True, 'dockAutoHide':True, 'hideTaskbar':False, 'winKeySearch':False, 'wallpaperQuality':'4k', 'nightLighting':False, 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
+    'version': 4, 'macDock':True, 'dockAutoHide':True, 'hideTaskbar':True, 'winKeySearch':True, 'shellRevision':2, 'wallpaperQuality':'4k', 'nightLighting':False, 'theme': 'apricot', 'backgroundMode': 'image', 'background': '',
     'imageBackground': '', 'videoBackground': '', 'wallpaperSlides': [], 'wallpaperRotation': False, 'screen': '', 'motion': True, 'fps': 30, 'photoInterval': 30,
     'wallpaperFit':'fill','mediaSource':'', 'dim': .0, 'volume': .6, 'slideshow': True,
     'widgets': WIDGETS, 'photos': [], 'playlist': [], 'memo': '',
@@ -117,6 +117,7 @@ def validate(data):
             if timer.get(key) in options:t[key]=timer[key]
         if isinstance(timer.get('alarmFile'),str):t['alarmFile']=timer['alarmFile'][:4096]
         t['finished']=bool(timer.get('finished',False))
+    if data.get('shellRevision',0)<2 and out['macDock']:out['hideTaskbar']=True;out['winKeySearch']=True
     from room_items import normalize_item
     if isinstance(data.get('decorations'),list):
         seen=set()

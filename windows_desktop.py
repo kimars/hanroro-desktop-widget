@@ -119,10 +119,28 @@ class DesktopHost:
         self.allow_zorder=True
         try:self.u.SetWindowPos(self.overlay,previous,0,0,0,0,0x0001|0x0002|0x0010|0x0040|0x0200)
         finally:self.allow_zorder=False
+    def attach_auxiliary(self,hwnd):
+        if not IS_WINDOWS or not self.overlay:return False
+        hwnd=int(hwnd)
+        if not hasattr(self,'auxiliary'):self.auxiliary=set()
+        self.auxiliary.add(hwnd);ex=self.getlong(hwnd,-20);self.setlong(hwnd,-20,(ex|0x80|0x08000000)&~0x40008);self.setlong(hwnd,-8,int(self.progman));self.sync_auxiliary();return True
+    def sync_auxiliary(self):
+        if not IS_WINDOWS or not self.overlay:return
+        for hwnd in list(getattr(self,'auxiliary',set())):
+            if not self.u.IsWindow(hwnd):self.auxiliary.discard(hwnd);continue
+            previous=self.u.GetWindow(self.overlay,3)
+            if not previous or previous==hwnd:continue
+            self.allow_zorder=True
+            try:self.u.SetWindowPos(hwnd,previous,0,0,0,0,0x0001|0x0002|0x0010|0x0200)
+            finally:self.allow_zorder=False
     def detach(self):
         if IS_WINDOWS:
             if self.background and self.u.IsWindow(self.background):self.u.SetParent(self.background,0)
             if self.overlay and self.u.IsWindow(self.overlay):self.setlong(self.overlay,-8,0)
+        if IS_WINDOWS:
+            for hwnd in getattr(self,'auxiliary',set()):
+                if self.u.IsWindow(hwnd):self.setlong(hwnd,-8,0)
+            self.auxiliary=set()
         self.parent=self.background=self.overlay=self.desktop_root=0;self.input_active=False
     def fullscreen_app(self,screen):
         if not IS_WINDOWS:return False

@@ -62,3 +62,46 @@ def test_shell_search_without_os_changes_and_catalog_cache(tmp_path,qt_applicati
         assert shell.native.process is None
     finally:
         shell.close();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.updates.close();b.update_prompt.close();b.telemetry_link.close();b.features_controller.close();b.deleteLater();QTest.qWait(10)
+
+
+def test_taskbar_order_all_apps_and_multiple_windows():
+    from taskbar_catalog import normalize_taskbar,dock_rows,group_windows
+    catalog=[{'name':'Z app','target':'app:z','path':'z.exe'},{'name':'A app','target':'app:a','path':'a.exe'}]
+    raw=[{'name':'A app','appid':'a','left':200},{'name':'Z app','appid':'z','left':100}]
+    pins=normalize_taskbar(raw,catalog);assert [r['target'] for r in pins]==['app:z','app:a']
+    windows=[{'name':'Window one','target':'app:z','hwnd':1},{'name':'Window two','target':'app:z','hwnd':2}]
+    assert len(group_windows(windows)['app:z'])==2
+    assert len(dock_rows(pins,windows))==2
+    extra=[{'name':str(i),'target':'app:extra'+str(i)} for i in range(70)]
+    assert len(dock_rows(pins,extra))==72
+
+
+def test_dock_has_pages_restores_widget_buttons_and_uses_desktop_layer(tmp_path,qt_application):
+    from desktop_shell import DesktopShell
+    from PySide6.QtCore import Qt
+    b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');shell=DesktopShell(SimpleNamespace(app=qt_application,bridge=b,pick_screen=qt_application.primaryScreen))
+    try:
+        shell.taskbar_rows=[{'name':str(i),'target':'app:'+str(i),'kind':'taskbar'} for i in range(70)];shell.taskbar_loaded=True;shell.dock.refresh()
+        assert not shell.dock.windowFlags()&Qt.WindowStaysOnTopHint
+        assert len(shell.dock.all_rows)==72 and shell.dock.pages>1
+        assert shell.dock.rows[-1]['target']=='shell:next'
+        source=(Path(__file__).resolve().parents[1]/'qml/Scene.qml').read_text();line=next(l for l in source.splitlines() if 'LauncherCard {' in l)
+        assert '!s.macDock' not in line
+    finally:
+        shell.close();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.updates.close();b.update_prompt.close();b.telemetry_link.close();b.features_controller.close();b.deleteLater();QTest.qWait(10)
+
+
+def test_window_picker_keeps_all_windows_and_start_has_all_apps(tmp_path,qt_application,monkeypatch):
+    import desktop_shell
+    b=Bridge(Store(tmp_path/'data'),Path(__file__).resolve().parents[1]/'assets');shell=desktop_shell.DesktopShell(SimpleNamespace(app=qt_application,bridge=b,pick_screen=qt_application.primaryScreen));shell.started=True
+    try:
+        shell.running_rows=[{'target':'app:test','hwnd':i,'pid':10,'name':'Document '+str(i)} for i in range(4)]
+        shell.choose_item({'name':'Test','target':'app:test'});assert len(shell.window_menu.actions())==4;shell.window_menu.close()
+        shell.apps=[{'name':'App '+str(i),'target':'app:'+str(i),'path':''} for i in range(300)];shell.toggle_search();shell.search.field.clear();shell.search.query_changed()
+        assert shell.search.results.count()==300
+        from PySide6.QtWidgets import QListView
+        assert shell.search.results.viewMode()==QListView.ViewMode.IconMode
+        b.media.data.update(connected=True,playing=False);b.sync_telemetry();assert not b.telemetry_link.config['audio']
+        b.media.data.update(playing=True);b.sync_telemetry();assert b.telemetry_link.config['audio']
+    finally:
+        shell.close();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.updates.close();b.update_prompt.close();b.telemetry_link.close();b.features_controller.close();b.deleteLater();QTest.qWait(10)

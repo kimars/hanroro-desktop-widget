@@ -49,7 +49,7 @@ class Bridge(QObject):
         self.features_controller=DesktopFeatures(store,self.assets,self)
         self.features_controller.changed.connect(self.featureChanged);self.features_controller.persist.connect(self.debounce.start);self.features_controller.notice.connect(self.toast)
         self.telemetry_link=TelemetryLink(Path(__file__).resolve().parent/'main.py',self);self.telemetry_link.changed.connect(self.telemetryChanged);self.telemetry_link.levelsChanged.connect(self.audioChanged)
-        self.stateChanged.connect(self.sync_telemetry);self.pausedChanged.connect(self.sync_telemetry);self.editChanged.connect(self.sync_telemetry);self.sync_telemetry()
+        self.media.changed.connect(self.sync_telemetry);self.stateChanged.connect(self.sync_telemetry);self.pausedChanged.connect(self.sync_telemetry);self.editChanged.connect(self.sync_telemetry);self.sync_telemetry()
         self.slides=QTimer(self);self.slides.setSingleShot(True);self.slides.timeout.connect(self.advance_wallpaper);self._wallpaper_index=0;self._slide_remaining=None;self.set_slide_timer()
         self.midnight=QTimer(self);self.midnight.setInterval(60000);self.midnight.timeout.connect(self.refresh_state);self.midnight.start()
         if not self.store.path.exists() or self.store.load_warning:
@@ -79,7 +79,7 @@ class Bridge(QObject):
     def audioLevels(self):return self.telemetry_link.data['levels']
     def sync_telemetry(self):
         widgets=self.store.data['widgets']
-        self.telemetry_link.configure(audio=widgets['player']['visible'] and self.store.data['audioReactive'] and self.store.data['motion'] and not self._paused and not self._edit,monitor=widgets['system']['visible'])
+        self.telemetry_link.configure(audio=(not self.media.data.get('connected',False) or self.media.data.get('playing',False)) and widgets['player']['visible'] and self.store.data['audioReactive'] and self.store.data['motion'] and not self._paused and not self._edit,monitor=widgets['system']['visible'])
     @Slot()
     def timerToggle(self):self.features_controller.toggle()
     @Slot()

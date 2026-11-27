@@ -4,7 +4,7 @@ from pathlib import Path
 
 def rank_apps(rows,query,limit=24):
     q=query.casefold().strip();hits=[r for r in rows if not q or q in r['name'].casefold()]
-    return sorted(hits,key=lambda r:(not r['name'].casefold().startswith(q),len(r['name']),r['name'].casefold()))[:limit]
+    return (sorted(hits,key=lambda r:r['name'].casefold()) if not q else sorted(hits,key=lambda r:(not r['name'].casefold().startswith(q),len(r['name']),r['name'].casefold())))[:limit]
 
 def local_files(query,roots,limit=12):
     q=query.casefold().strip();out=[];visited=0

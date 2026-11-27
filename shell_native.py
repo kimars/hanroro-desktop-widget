@@ -16,6 +16,14 @@ class ShellNative:
         if not self.event:return False
         try:self.process=subprocess.Popen([str(helper),str(os.getpid()),str(hwnd),'1' if hide_taskbar else '0','1' if win_key else '0',name],creationflags=subprocess.CREATE_NO_WINDOW,close_fds=True);self.configuration=config;return True
         except OSError:self.close();return False
+    def focus(self,hwnd):
+        if sys.platform!='win32':return
+        from ctypes import wintypes
+        u=ctypes.WinDLL('user32');k=ctypes.WinDLL('kernel32');u.GetForegroundWindow.restype=wintypes.HWND;u.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.c_void_p];u.AttachThreadInput.argtypes=[wintypes.DWORD,wintypes.DWORD,wintypes.BOOL];u.SetForegroundWindow.argtypes=[wintypes.HWND];u.SetFocus.argtypes=[wintypes.HWND]
+        foreground=u.GetForegroundWindow();thread=u.GetWindowThreadProcessId(foreground,None) if foreground else 0;current=k.GetCurrentThreadId();attached=bool(thread and thread!=current and u.AttachThreadInput(current,thread,True))
+        try:u.SetForegroundWindow(hwnd);u.SetFocus(hwnd)
+        finally:
+            if attached:u.AttachThreadInput(current,thread,False)
     def close(self):
         if self.event:
             k=ctypes.WinDLL('kernel32',use_last_error=True);k.SetEvent.argtypes=[ctypes.c_void_p];k.CloseHandle.argtypes=[ctypes.c_void_p];k.SetEvent(self.event)

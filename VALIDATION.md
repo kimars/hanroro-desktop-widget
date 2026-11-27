@@ -88,3 +88,11 @@ Removed weather UI, location preferences, weather service and its QML card. Exis
 - Native guardian CI smoke test checks stop-event and parent-death exits using a hidden STATIC window. It does not hide a taskbar or intercept keyboard input.
 - Native Win-key capture/Win combinations, actual Explorer taskbar restoration, Store-app identity and Windows Search result availability require physical Windows checks; no claim that those inputs were simulated on Linux.
 - Local QML scene and separate dock/search/settings rendered without QML errors.
+
+
+## 1.7.1
+Added regression coverage for spatial taskbar order, no app truncation, paging, non-topmost dock flags, restored original launcher, all-app start grid, four windows in one group, paused-audio suspension, shared automatic/manual feed reads, malicious feed rejection and API fallback. Actual host HEAD and REST probes both succeeded against v1.7.0: user-specific failure was not reproduced, so no claim that HEAD blocking was confirmed. Native Explorer UIA order and physical Win keys require Windows desktop verification; CI validates compilation, guardian lifetime and packaged image loading.
+
+- Final source suite: 137 passed. Packaged live automatic probe (not a settings click) is now a required Windows build step, using the actual public metadata and checksum before installer publication.
+
+- Follow-up shell/app integration tests cover desktop-space reservation and original launcher behavior. Overlay mask now updates when its size changes so reserving dock space does not leave stale click regions.

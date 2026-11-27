@@ -17,8 +17,10 @@ class TelemetryLink(QObject):
         p.finished.connect(lambda *_:self.failed(p));p.errorOccurred.connect(lambda *_:self.failed(p) if p.error()==QProcess.ProcessError.FailedToStart else None)
         p.start(sys.executable,['--telemetry-worker'] if getattr(sys,'frozen',False) else [self.entry,'--telemetry-worker']);self.watch.start()
     def configure(self,audio=None,monitor=None):
+        previous=dict(self.config)
         if audio is not None:self.config['audio']=bool(audio)
         if monitor is not None:self.config['monitor']=bool(monitor)
+        if previous==self.config and (audio is not None or monitor is not None):return
         if self.process and self.process.state()==QProcess.ProcessState.Running:self.process.write((json.dumps({'action':'configure',**self.config})+'\n').encode())
     def read(self):
         if not self.process:return

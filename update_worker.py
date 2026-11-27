@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from media_worker import stdio
 from release_info import INSTALLER_ASSET
 MAX_INSTALLER=1024**3
-HOSTS=('github.com','api.github.com','objects.githubusercontent.com','release-assets.githubusercontent.com')
+HOSTS=('raw.githubusercontent.com','github.com','api.github.com','objects.githubusercontent.com','release-assets.githubusercontent.com')
 
 def version_tuple(text):
     match=re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)',str(text))
@@ -36,24 +36,26 @@ def limited_read(url,limit):
     if len(data)>limit:raise ValueError('업데이트 응답이 너무 큽니다.')
     return data
 
+def validate_feed(data,repository,current):
+    if not isinstance(data,dict) or data.get('repository')!=repository:raise ValueError('배포 저장소가 다릅니다.')
+    version=str(data.get('version',''));version_tuple(version)
+    if version_tuple(version)<=version_tuple(current):return {'status':'current','version':current,'channel':'feed'}
+    url=str(data.get('url',''));expected='https://github.com/'+repository+'/releases/download/v'+version+'/'+INSTALLER_ASSET
+    if url!=expected:raise ValueError('설치 파일 주소가 올바르지 않습니다.')
+    trusted_url(url);size=int(data.get('size',0));digest=str(data.get('sha256',''))
+    if not 1<=size<=MAX_INSTALLER or not re.fullmatch('[0-9a-fA-F]{64}',digest):raise ValueError('설치 파일 검증 정보가 올바르지 않습니다.')
+    return {'status':'available','version':version,'url':url,'size':size,'sha256':digest.lower(),'notes':str(data.get('notes',''))[:6000],'channel':'feed'}
+
 def probe(repository,current):
-    """Read the public latest-release redirect, avoiding one REST request per poll."""
-    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):raise ValueError('업데이트 저장소가 설정되지 않았습니다.')
-    url='https://github.com/'+repository+'/releases/latest'
-    request=Request(url,method='HEAD',headers={'User-Agent':'HanroroDesktopWidget-Updater','Cache-Control':'no-cache'})
-    try:
-        with build_opener(SecureRedirect()).open(request,timeout=15) as response:final=response.geturl()
-    except HTTPError as error:
-        if error.code==404:return {'status':'unchanged'}
-        raise
-    trusted_url(final);parsed=urlsplit(final);prefix='/'+repository+'/releases/tag/'
-    if parsed.hostname!='github.com' or not parsed.path.startswith(prefix):raise ValueError('배포 주소를 확인할 수 없습니다.')
-    version=parsed.path[len(prefix):]
-    if version_tuple(version)<=version_tuple(current):return {'status':'unchanged'}
-    return release_info(repository,current)
+    result=release_info(repository,current)
+    return {'status':'unchanged','channel':result.get('channel','api')} if result['status']=='current' else result
 
 def release_info(repository,current):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository):raise ValueError('업데이트 저장소가 설정되지 않았습니다.')
+    try:
+        feed=json.loads(limited_read('https://raw.githubusercontent.com/'+repository+'/main/update-feed.json?minute='+str(int(time.time()//60)),32768))
+        return validate_feed(feed,repository,current)
+    except (OSError,ValueError,KeyError,TypeError):pass
     try:data=json.loads(limited_read('https://api.github.com/repos/'+repository+'/releases/latest',1024**2))
     except HTTPError as error:
         if error.code==404:return {'status':'current','version':current,'message':'아직 새 업데이트가 없습니다.'}
@@ -77,7 +79,7 @@ def release_info(repository,current):
         if not checksum_url.startswith(prefix):raise ValueError('업데이트 파일 검증 정보가 없습니다.')
         digest=limited_read(checksum_url,1024).decode('ascii').split()[0]
     if not re.fullmatch('[0-9a-fA-F]{64}',digest):raise ValueError('업데이트 파일 검증 정보가 올바르지 않습니다.')
-    return {'status':'available','version':version,'url':url,'size':size,'sha256':digest.lower(),'notes':str(data.get('body') or '')[:6000]}
+    return {'status':'available','version':version,'url':url,'size':size,'sha256':digest.lower(),'notes':str(data.get('body') or '')[:6000],'channel':'api'}
 
 def download(repository,current,directory,emit):
     # Re-fetch trusted release metadata; do not accept a file URL from a UI command.
