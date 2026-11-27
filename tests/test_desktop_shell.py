@@ -83,10 +83,10 @@ def test_dock_has_pages_restores_widget_buttons_and_uses_desktop_layer(tmp_path,
     try:
         shell.taskbar_rows=[{'name':str(i),'target':'app:'+str(i),'kind':'taskbar'} for i in range(70)];shell.taskbar_loaded=True;shell.dock.refresh()
         assert not shell.dock.windowFlags()&Qt.WindowStaysOnTopHint
-        assert len(shell.dock.all_rows)==72 and shell.dock.pages>1
+        assert len([r for r in shell.dock.all_rows if r.get('kind')=='taskbar'])==70 and shell.dock.pages>1
         assert shell.dock.rows[-1]['target']=='shell:next'
         source=(Path(__file__).resolve().parents[1]/'qml/Scene.qml').read_text();line=next(l for l in source.splitlines() if 'LauncherCard {' in l)
-        assert '!s.macDock' not in line
+        assert 'scene.layerRole' in line  # Launcher shortcuts live in the system dock on the desktop.
     finally:
         shell.close();b.slides.stop();b.midnight.stop();b.debounce.stop();b.media_importer.close();b.wallpaper_cache.close();b.writer.close();b.media.close();b.updates.close();b.update_prompt.close();b.telemetry_link.close();b.features_controller.close();b.deleteLater();QTest.qWait(10)
 

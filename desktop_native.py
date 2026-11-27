@@ -5,6 +5,8 @@ from pathlib import Path
 def norm(value):return ntpath.normcase(ntpath.normpath(os.path.expandvars(str(value)))) if value else ''
 
 def matching_windows(row,windows):
+    from shell_groups import explorer
+    if explorer(row):return [w for w in windows if explorer(w)]
     target=str(row.get('target','')).casefold();appid=target[4:] if target.startswith('app:') else ''
     exact=[w for w in windows if appid and str(w.get('app_id','')).casefold()==appid]
     if exact:return exact
@@ -56,6 +58,7 @@ def resolve_rows(rows):
         if path:
             if path not in cache:cache[path]=shortcut(path)
             out.update({k:v for k,v in cache[path].items() if v})
+        out['directory']=bool(out.get('directory') or (path and Path(path).is_dir()))
         out['executables']=[out['exe']] if out.get('exe') else list(out.get('executables',[]));result.append(out)
     return result
 
@@ -144,12 +147,9 @@ def extract_icon(row):
     ole,initialized=_com()
     try:
         target=str(row.get('target',''));sources=[]
-        if row.get('hwnd'):
-            image=_window_image(int(row['hwnd']))
-            if not image.isNull():return _png(image)
         if target.startswith('app:'):sources.append('shell:AppsFolder\\'+target[4:])
-        for value in (row.get('path'),row.get('exe'),target if not target.startswith('app:') else None):
-            if value and value not in sources and Path(value).is_file():sources.append(str(value))
+        for value in (row.get('exe'),row.get('path'),target if not target.startswith('app:') else None):
+            if value and value not in sources and Path(value).exists():sources.append(str(value))
         for source in sources:
             image=_shell_image(source)
             if not image.isNull():return _png(image)

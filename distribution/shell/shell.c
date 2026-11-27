@@ -6,7 +6,7 @@
 #include <wchar.h>
 /* No keystrokes are stored. Only a standalone Win press is consumed; chords replay normally. */
 static HHOOK hook;static HWINEVENTHOOK events[3];static DWORD ownerpid;static ULONGLONG lastNotice;static HWND search;static int held=0,chord=0;static DWORD winkey=VK_LWIN;
-static HWND dock,frame;static int registered=0,positioning=0;static UINT savedState;static int stateSaved=0;
+static UINT taskbarCreated;static HWND dock,frame;static int registered=0,positioning=0;static UINT savedState;static int stateSaved=0;
 static HWND bars[64];static DWORD owners[64];static int count=0;
 static int isbar(HWND w){wchar_t c[80]={0};GetClassNameW(w,c,80);return !wcscmp(c,L"Shell_TrayWnd")||!wcscmp(c,L"Shell_SecondaryTrayWnd");}
 static BOOL CALLBACK hidebar(HWND w,LPARAM l){int i;DWORD pid;if(!isbar(w))return TRUE;for(i=0;i<count;i++)if(bars[i]==w){ShowWindow(w,SW_HIDE);return TRUE;}if(count<64&&IsWindowVisible(w)){GetWindowThreadProcessId(w,&pid);bars[count]=w;owners[count++]=pid;ShowWindow(w,SW_HIDE);}return TRUE;}
@@ -21,11 +21,13 @@ static void frame_position(void){
  PostMessageW(search,WM_APP+443,(WPARAM)frame,1);positioning=0;
 }
 static LRESULT CALLBACK frame_proc(HWND w,UINT msg,WPARAM wp,LPARAM lp){
+ if(msg==taskbarCreated&&taskbarCreated){APPBARDATA d;ZeroMemory(&d,sizeof(d));d.cbSize=sizeof(d);d.hWnd=frame;d.uCallbackMessage=WM_APP+444;registered=(int)SHAppBarMessage(ABM_NEW,&d);frame_position();return 0;}
+ if(msg==WM_DISPLAYCHANGE){frame_position();return 0;}
  if(msg==WM_APP+444){if(wp==ABN_POSCHANGED)frame_position();else if(wp==ABN_FULLSCREENAPP)PostMessageW(search,WM_APP+443,(WPARAM)frame,lp?2:1);return 0;}
  if(msg==WM_MOUSEACTIVATE)return MA_NOACTIVATE;return DefWindowProcW(w,msg,wp,lp);
 }
 static int create_frame(void){
- WNDCLASSW c;APPBARDATA data;ZeroMemory(&c,sizeof(c));c.lpfnWndProc=frame_proc;c.hInstance=GetModuleHandleW(NULL);c.lpszClassName=L"HanroroAppBarHost";RegisterClassW(&c);
+ WNDCLASSW c;APPBARDATA data;taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");ZeroMemory(&c,sizeof(c));c.lpfnWndProc=frame_proc;c.hInstance=GetModuleHandleW(NULL);c.lpszClassName=L"HanroroAppBarHost";RegisterClassW(&c);
  frame=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_NOACTIVATE|WS_EX_LAYERED|WS_EX_TRANSPARENT,c.lpszClassName,L"",WS_POPUP,0,0,1,1,NULL,NULL,c.hInstance,NULL);
  if(!frame)return 0;SetLayeredWindowAttributes(frame,0,0,LWA_ALPHA);ZeroMemory(&data,sizeof(data));data.cbSize=sizeof(data);data.hWnd=frame;data.uCallbackMessage=WM_APP+444;
  registered=(int)SHAppBarMessage(ABM_NEW,&data);if(!registered){DestroyWindow(frame);frame=NULL;return 0;}frame_position();return 1;

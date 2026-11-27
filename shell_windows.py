@@ -32,8 +32,10 @@ def visible_windows():
         if identity not in _appids:_appids[identity]=_window_property_id(hwnd)
         appid=_appids[identity] or appid
         if not path:return True
+        classname=ctypes.create_unicode_buffer(256);u.GetClassNameW.argtypes=[wintypes.HWND,wintypes.LPWSTR,ctypes.c_int];u.GetClassNameW(hwnd,classname,256)
+        if classname.value in ('CabinetWClass','ExploreWClass'):appid='Microsoft.Windows.Explorer'
         target='app:'+appid if appid else path
-        paths.add(path.casefold());paths.add(target.casefold());rows.append({'hwnd':int(hwnd),'pid':pid.value,'name':text.value,'path':path,'target':target,'app_id':appid,'kind':'running','minimized':bool(u.IsIconic(hwnd))});return True
+        paths.add(path.casefold());paths.add(target.casefold());rows.append({'hwnd':int(hwnd),'pid':pid.value,'name':text.value,'path':path,'target':target,'app_id':appid,'class':classname.value,'kind':'running','minimized':bool(u.IsIconic(hwnd))});return True
     u.EnumWindows.argtypes=[callback,wintypes.LPARAM];u.EnumWindows(visit,0)
     for pid in list(_cache):
         if pid not in live_pids:del _cache[pid]
@@ -41,12 +43,12 @@ def visible_windows():
         if identity not in live_hwnds:del _appids[identity]
     return {'paths':paths,'rows':rows}
 
-def select_window(row):
+def select_window(row,toggle=True):
     if sys.platform!='win32':return False
     from ctypes import wintypes
-    u=ctypes.WinDLL('user32');u.IsWindow.argtypes=[wintypes.HWND];u.IsIconic.argtypes=[wintypes.HWND];u.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)];u.GetForegroundWindow.restype=wintypes.HWND;u.ShowWindow.argtypes=[wintypes.HWND,ctypes.c_int];u.SetForegroundWindow.argtypes=[wintypes.HWND]
+    u=ctypes.WinDLL('user32');u.IsWindow.argtypes=[wintypes.HWND];u.IsIconic.argtypes=[wintypes.HWND];u.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)];u.GetForegroundWindow.restype=wintypes.HWND;u.ShowWindowAsync.argtypes=[wintypes.HWND,ctypes.c_int];u.SetForegroundWindow.argtypes=[wintypes.HWND]
     hwnd=int(row['hwnd']);pid=wintypes.DWORD();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
     if not u.IsWindow(hwnd) or pid.value!=int(row['pid']):return False
-    if int(u.GetForegroundWindow() or 0)==hwnd and not u.IsIconic(hwnd):u.ShowWindow(hwnd,6)
-    else:u.ShowWindow(hwnd,9);u.SetForegroundWindow(hwnd)
+    if toggle and int(u.GetForegroundWindow() or 0)==hwnd and not u.IsIconic(hwnd):u.ShowWindowAsync(hwnd,6)
+    else:u.ShowWindowAsync(hwnd,9);u.SetForegroundWindow(hwnd)
     return True

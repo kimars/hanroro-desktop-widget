@@ -39,3 +39,27 @@ def test_worker_failure_reports_and_can_restart(tmp_path,qt_application):
         while not results and time.monotonic()<until:QTest.qWait(10);time.sleep(.001)
         assert results
     finally:service.close()
+
+def test_explorer_shortcuts_and_distinct_folder_appids_share_one_group():
+    from shell_groups import compose
+    windows=[{'target':'app:folder.'+str(i),'path':r'C:\Windows\explorer.exe','class':'CabinetWClass','hwnd':i,'name':str(i)} for i in (1,2)]
+    pins=[{'target':'app:Microsoft.Windows.Explorer','name':'탐색기'}]
+    shortcuts=[{'target':'special:documents','name':'내 폴더','kind':'shortcut','index':0},{'target':'special:downloads','name':'다운로드','kind':'shortcut','index':1}]
+    rows=compose(pins,windows,shortcuts)
+    assert len(rows)==1 and len(rows[0]['shortcuts'])==2
+    assert len(matching_windows(rows[0],windows))==2
+
+def test_pinned_shortcut_running_windows_and_profiles_do_not_duplicate():
+    from shell_groups import compose
+    pins=[{'target':'app:editor','name':'Editor','executables':['editor.exe']}]
+    windows=[{'target':'editor.exe','path':'editor.exe','hwnd':i} for i in (1,2)]
+    assert len(compose(pins,windows))==1
+    profiles=[{'target':'app:browser.profile1','app_id':'browser.profile1','path':'browser.exe','hwnd':1},{'target':'app:browser.profile2','app_id':'browser.profile2','path':'browser.exe','hwnd':2}]
+    assert len(compose([],profiles))==2
+
+
+def test_shortcut_group_metadata_can_cross_the_worker_json_boundary():
+    from shell_groups import compose
+    rows=compose([],[],[{'name':'내 폴더','target':'special:documents','kind':'shortcut','index':0},{'name':'Music','target':'app:music','kind':'shortcut','index':1}])
+    assert len(json.loads(json.dumps(rows)))==2
+    assert rows[0]['shortcuts'][0] is not rows[0]

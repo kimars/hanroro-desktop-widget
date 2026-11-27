@@ -124,11 +124,13 @@ class DesktopHost:
         hwnd=int(hwnd)
         if not hasattr(self,'auxiliary'):self.auxiliary=set()
         if hwnd in self.auxiliary:return True
-        self.auxiliary.add(hwnd);ex=self.getlong(hwnd,-20);self.setlong(hwnd,-20,(ex|0x80|0x08000000)&~0x40008);self.setlong(hwnd,-8,int(self.progman));self.sync_auxiliary();return True
+        self.auxiliary.add(hwnd);ex=self.getlong(hwnd,-20);self.setlong(hwnd,-20,(ex|0x80|0x08000000)&~0x40008);self.setlong(hwnd,-8,0);self.sync_auxiliary();return True
     def set_auxiliary_revealed(self,hwnd,revealed):
         if not IS_WINDOWS:return
         if not hasattr(self,'auxiliary_revealed'):self.auxiliary_revealed=set()
-        if revealed:self.auxiliary_revealed.add(hwnd)
+        if revealed:
+            self.auxiliary_revealed.add(hwnd)
+            if self.u.IsIconic(hwnd) or not self.u.IsWindowVisible(hwnd):self.u.ShowWindow(hwnd,4)
         else:self.auxiliary_revealed.discard(hwnd)
         self.allow_zorder=True
         try:self.u.SetWindowPos(hwnd,-1 if revealed else -2,0,0,0,0,0x0001|0x0002|0x0010)

@@ -3,7 +3,7 @@ import ctypes,math,sys,time,base64,hashlib,logging
 from pathlib import Path
 from PySide6.QtCore import Qt,QObject,Signal,QTimer,QPoint,QRectF,QFileInfo,QEvent
 from PySide6.QtGui import QPainter,QColor,QPen,QCursor,QIcon,QKeySequence,QShortcut
-from PySide6.QtWidgets import QApplication,QWidget,QDialog,QVBoxLayout,QLineEdit,QListWidget,QListWidgetItem,QLabel,QFileIconProvider,QMenu,QAbstractItemView,QPushButton,QScrollArea,QFrame
+from PySide6.QtWidgets import QApplication,QWidget,QDialog,QVBoxLayout,QLineEdit,QListWidget,QListWidgetItem,QLabel,QFileIconProvider,QMenu,QAbstractItemView,QPushButton,QScrollArea,QFrame,QHBoxLayout,QGridLayout
 from shell_native import ShellNative
 from shell_service import ShellService
 from desktop_native import matching_windows
@@ -92,11 +92,12 @@ class SearchWindow(QDialog):
 
 class MacDock(QWidget):
     def __init__(self,owner):
-        super().__init__();self.owner=owner;self.setWindowTitle('한로로 독');self.setWindowFlags(Qt.Tool|Qt.FramelessWindowHint|Qt.WindowDoesNotAcceptFocus);self.setAttribute(Qt.WA_ShowWithoutActivating);self.setAttribute(Qt.WA_TranslucentBackground);self.setMouseTracking(True);self.hover=-1;self.rows=[];self.all_rows=[];self.page=0;self.hit=[];self.last_hover=time.monotonic();self.closed=False
+        super().__init__();self.owner=owner;self.setWindowTitle('한로로 독');self.setWindowFlags(Qt.Tool|Qt.FramelessWindowHint|Qt.WindowDoesNotAcceptFocus);self.setAttribute(Qt.WA_ShowWithoutActivating);self.setAttribute(Qt.WA_TranslucentBackground);self.setMouseTracking(True);self.hover=-1;self.rows=[];self.all_rows=[];self.page=0;self.hit=[];self.last_hover=time.monotonic();self.closed=False;self._last_health=0
         self.timer=QTimer(self);self.timer.setInterval(180);self.timer.timeout.connect(self.check_edge)
         self.hover_delay=QTimer(self);self.hover_delay.setSingleShot(True);self.hover_delay.setInterval(350);self.hover_delay.timeout.connect(lambda:self.owner.hover_item(self.rows[self.hover]) if 0<=self.hover<len(self.rows) else None);self.revealed=False
     def refresh(self):
-        self.all_rows=[{'name':'시작 · 검색','target':'shell:search','glyph':'search'}]+dock_rows(self.owner.taskbar_rows,self.owner.running_rows)+[{'name':'설정','target':'action:settings','glyph':'settings'}]
+        from shell_groups import compose
+        self.all_rows=[{'name':'시작 · 검색','target':'shell:search','glyph':'search'}]+compose(self.owner.taskbar_rows,self.owner.running_rows,self.owner.shortcuts)+[{'name':'설정','target':'action:settings','glyph':'settings'}]
         self.reposition();self.update()
     def wheelEvent(self,event):
         if self.pages>1:self.page=max(0,min(self.pages-1,self.page+(-1 if event.angleDelta().y()>0 else 1)));self.reposition();self.update()
@@ -127,20 +128,28 @@ class MacDock(QWidget):
                 if not row.get('path'):row['path']=window.get('path','')
             self.owner.item_icon(row)
     def reveal(self,value):
-        if self.revealed==value:return
+        if self.revealed==value and not value:return
         self.revealed=value;host=getattr(self.owner.program,'host',None)
         if host and hasattr(host,'set_auxiliary_revealed'):host.set_auxiliary_revealed(int(self.winId()),value)
     def after_action(self):
         self.hover_delay.stop();self.owner.name_tip.hide()
         if self.owner.b.store.data.get('dockAutoHide',False):self.hide();self.reveal(False)
+    def anchor(self,row):
+        index=next((i for i,r in enumerate(self.rows) if self.owner.icon_key(r)==self.owner.icon_key(row)),-1)
+        return self.mapToGlobal(QPoint(round(14+self.slot*(index+.5)),20)) if index>=0 else self.geometry().center()
     def hover_target(self):return self.rows[self.hover]['target'] if 0<=self.hover<len(self.rows) else ''
     def check_edge(self):
-        if not self.owner.active or self.owner.fullscreen or (IS_WINDOWS and not self.owner.taskbar_loaded):return
+        if not self.owner.active:return
+        self.owner.check_fullscreen()
+        if self.owner.fullscreen:
+            self.hide();self.reveal(False);self.owner.chooser.hide();self.owner.name_tip.hide();return
         if self.owner.chooser.isVisible():self.last_hover=time.monotonic();return
         always=not self.owner.b.store.data.get('dockAutoHide',False)
         if always:
             # A reserved AppBar strip keeps maximized applications out of the dock.
-            if not IS_WINDOWS or self.owner.bar_active:self.show();self.reveal(True)
+            if not IS_WINDOWS or self.owner.bar_active:
+                self.show()
+                if time.monotonic()-self._last_health>1:self.reveal(True);self._last_health=time.monotonic()
             return
         p=QCursor.pos();inside=self.isVisible() and self.geometry().adjusted(-8,-12,8,8).contains(p);screen=QApplication.screenAt(p);g=screen.geometry() if screen else None;edge=g and 0<=g.bottom()-p.y()<5 and abs(p.x()-g.center().x())<self.width()/2
         if inside or edge:
@@ -151,8 +160,8 @@ class MacDock(QWidget):
         p=QPainter(self);p.setRenderHint(QPainter.Antialiasing);p.setRenderHint(QPainter.SmoothPixmapTransform);dark=self.owner.b.store.data['theme']=='night';surface=QColor('#e52b3943' if dark else '#e6fff8f0');p.setPen(QPen(QColor('#65ffffff'),1));p.setBrush(surface);p.drawRoundedRect(QRectF(1,20,self.width()-2,74),23,23);self.hit=[]
         xmouse=self.mapFromGlobal(QCursor.pos()).x() if self.underMouse() else -1000
         for i,row in enumerate(self.rows):
-            x=14+self.slot*(i+.5);magnify=1+.28*math.exp(-((xmouse-x)/55)**2) if self.owner.b.store.data['motion'] else 1;size=min(46,self.slot-8)*magnify;r=QRectF(x-size/2,77-size,size,size);self.hit.append(QRectF(x-self.slot/2,12,self.slot,78));p.setPen(Qt.NoPen);p.setBrush(QColor('#516578' if dark else '#e9edf5'));p.drawRoundedRect(r,14,14);self.owner._icons.get(self.owner.icon_key(row),QIcon()).paint(p,r.adjusted(8,8,-8,-8).toRect())
-            if row.get('target','').casefold() in self.owner.running_targets:p.setBrush(QColor('#f0acc0' if dark else '#4c6877'));p.drawEllipse(QPoint(round(x),86),2,2)
+            x=14+self.slot*(i+.5);magnify=1+.28*math.exp(-((xmouse-x)/55)**2) if self.owner.b.store.data['motion'] else 1;size=min(46,self.slot-8)*magnify;r=QRectF(x-size/2,77-size,size,size);self.hit.append(QRectF(x-self.slot/2,12,self.slot,78));p.setPen(Qt.NoPen);self.owner._icons.get(self.owner.icon_key(row),QIcon()).paint(p,r.toRect())
+            if matching_windows(row,self.owner.running_rows):p.setBrush(QColor('#f0acc0' if dark else '#4c6877'));p.drawEllipse(QPoint(round(x),86),2,2)
         p.end()
     def mouseMoveEvent(self,event):
         point=event.position();index=next((i for i,r in enumerate(self.hit) if r.contains(point)),-1)
@@ -169,35 +178,66 @@ class MacDock(QWidget):
                 target=self.rows[index]['target']
                 if target in ('shell:prev','shell:next'):self.page=max(0,min(self.pages-1,self.page+(-1 if target=='shell:prev' else 1)));self.reposition();self.update()
                 else:self.owner.choose_item(self.rows[index])
+        elif event.button()==Qt.RightButton:
+            index=next((i for i,r in enumerate(self.hit) if r.contains(event.position())),-1)
+            if index>=0:
+                row=self.rows[index];self.owner.chooser.show_windows(row,matching_windows(row,self.owner.running_rows))
     def closeEvent(self,event):self.timer.stop();super().closeEvent(event)
 
 class WindowChooser(QWidget):
     def __init__(self,owner):
-        super().__init__();self.owner=owner;self.entries=[];self.setWindowFlags(Qt.Tool|Qt.FramelessWindowHint|Qt.WindowStaysOnTopHint|Qt.WindowDoesNotAcceptFocus);self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setObjectName('windowChooser');self.setStyleSheet('QWidget#windowChooser {background:#263747;border:1px solid #647785;border-radius:16px;} QLabel {color:#fff7ef;padding:5px;} QPushButton {text-align:left;background:#354958;color:#fff7ef;border:0;border-radius:9px;padding:12px;} QPushButton:hover {background:#506879;} QScrollArea {border:0;background:transparent;}')
-        layout=QVBoxLayout(self);layout.setContentsMargins(12,10,12,12);self.title=QLabel();self.title.setTextFormat(Qt.PlainText);layout.addWidget(self.title);self.scroll=QScrollArea();self.scroll.setWidgetResizable(True);layout.addWidget(self.scroll)
-        self.expiry=QTimer(self);self.expiry.setInterval(220);self.expiry.timeout.connect(self.check_leave);self.last_inside=time.monotonic()
+        super().__init__();self.owner=owner;self.entries=[];self.row={};self.page=0;self._identity=None;self.regions=[]
+        from window_previews import WindowPreviews
+        self.previews=WindowPreviews();self.setWindowFlags(Qt.Tool|Qt.FramelessWindowHint|Qt.WindowStaysOnTopHint|Qt.WindowDoesNotAcceptFocus);self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setObjectName('windowChooser');self.setStyleSheet('QWidget#windowChooser {background:#263747;border:1px solid #647785;border-radius:14px;} QLabel {color:#fff7ef;background:transparent;} QPushButton {text-align:left;background:#354958;color:#fff7ef;border:0;border-radius:8px;padding:8px;} QPushButton:hover {background:#506879;}')
+        self.layout=QVBoxLayout(self);self.layout.setContentsMargins(12,10,12,12);head=QHBoxLayout();self.title=QLabel();self.title.setTextFormat(Qt.PlainText);head.addWidget(self.title,1)
+        self.previous=QPushButton('‹');self.next=QPushButton('›')
+        for b in (self.previous,self.next):b.setFixedSize(30,28);b.setFocusPolicy(Qt.NoFocus);head.addWidget(b)
+        self.previous.clicked.connect(lambda:self.turn(-1));self.next.clicked.connect(lambda:self.turn(1));self.layout.addLayout(head);self.body=None
+        self.expiry=QTimer(self);self.expiry.setInterval(180);self.expiry.timeout.connect(self.check_leave);self.last_inside=time.monotonic()
     def nativeEvent(self,eventType,message):
         if sys.platform=='win32':
             from ctypes import wintypes
             if wintypes.MSG.from_address(int(message)).message==0x21:return True,3
         return super().nativeEvent(eventType,message)
     def show_windows(self,row,windows):
-        self.entries=list(windows);self.title.setText(str(row.get('name','')));body=QWidget();layout=QVBoxLayout(body);layout.setContentsMargins(0,0,0,0);layout.setSpacing(6)
-        for window in self.entries:
-            button=QPushButton(str(window.get('name','이름 없는 창')).replace('&','&&'));button.setToolTip(str(window.get('name','')));button.setIcon(self.owner.item_icon(row));button.setFocusPolicy(Qt.NoFocus);button.clicked.connect(lambda checked=False,w=dict(window):self.owner.activate_window(w));layout.addWidget(button)
-        old=self.scroll.takeWidget()
-        if old:old.deleteLater()
-        self.scroll.setWidget(body);self.resize(370,min(380,66+len(windows)*54));g=self.owner.program.pick_screen().geometry();x=QCursor.pos().x()-self.width()//2;self.move(max(g.left()+6,min(x,g.right()-self.width()-6)),self.owner.dock.y()-self.height()-6);self.owner.name_tip.hide();self.last_inside=time.monotonic();self.show();self.raise_();self.expiry.start()
+        identity=(self.owner.icon_key(row),tuple((w.get('hwnd'),w.get('name')) for w in windows))
+        if self._identity!=identity:self.page=0
+        self._identity=identity;self.entries=list(windows);self.row=dict(row);self.draw()
+    def turn(self,delta):self.page=max(0,min(self.pages-1,self.page+delta));self.draw()
+    def draw(self):
+        self.previews.close();self.title.setText(str(self.row.get('name','')));self.regions=[]
+        if self.body:self.layout.removeWidget(self.body);self.body.hide();self.body.deleteLater()
+        self.body=QWidget();column=QVBoxLayout(self.body);column.setContentsMargins(0,0,0,0);column.setSpacing(8);strip=QHBoxLayout();strip.setSpacing(8);column.addLayout(strip)
+        g=self.owner.program.pick_screen().geometry();self.per_page=max(1,min(3,(g.width()-48)//224));self.pages=max(1,math.ceil(len(self.entries)/self.per_page));self.page=min(self.page,self.pages-1)
+        for window in self.entries[self.page*self.per_page:(self.page+1)*self.per_page]:
+            card=QPushButton();card.setFixedSize(216,166);card.setFocusPolicy(Qt.NoFocus);card.setToolTip(window.get('name',''));card.clicked.connect(lambda checked=False,w=dict(window):self.owner.activate_window(w,toggle=False));content=QVBoxLayout(card);content.setContentsMargins(8,8,8,8)
+            title=QLabel(str(window.get('name','이름 없는 창')));title.setTextFormat(Qt.PlainText);title.setFixedHeight(23);title.setAttribute(Qt.WA_TransparentForMouseEvents);content.addWidget(title)
+            image=QLabel();image.setMinimumSize(196,116);image.setAttribute(Qt.WA_TransparentForMouseEvents);image.setAlignment(Qt.AlignCenter);image.setPixmap(self.owner.item_icon(self.row).pixmap(40,40));content.addWidget(image);strip.addWidget(card);self.regions.append((window,image))
+        if self.row.get('shortcuts'):
+            destinations=QGridLayout();column.addLayout(destinations)
+            for i,shortcut in enumerate(self.row['shortcuts']):
+                button=QPushButton(str(shortcut.get('name','열기')).replace('&','&&'));button.setMaximumWidth(208);button.setFocusPolicy(Qt.NoFocus);button.clicked.connect(lambda checked=False,r=dict(shortcut):self.launch_shortcut(r));destinations.addWidget(button,i//3,i%3)
+        self.layout.addWidget(self.body);self.previous.setVisible(self.pages>1);self.next.setVisible(self.pages>1);self.previous.setEnabled(self.page>0);self.next.setEnabled(self.page+1<self.pages)
+        self.adjustSize();anchor=self.owner.dock.anchor(self.row);x=anchor.x()-self.width()//2;self.move(max(g.left()+8,min(x,g.right()-self.width()-8)),max(g.top()+8,self.owner.dock.y()-self.height()-6));self.owner.name_tip.hide();self.last_inside=time.monotonic();self.show();self.raise_();self.expiry.start();QTimer.singleShot(0,self.attach_previews)
+    def attach_previews(self):
+        if not self.isVisible() or self.owner.closed:return
+        self.previews.close()
+        for window,image in self.regions:
+            point=image.mapTo(self,QPoint(0,0));ok=self.previews.add(int(self.winId()),window['hwnd'],(point.x(),point.y(),image.width(),image.height()),self.devicePixelRatioF())
+            if ok:image.clear()
+    def launch_shortcut(self,row):self.hide();self.owner.b.launch(row['index'])
     def check_leave(self):
-        point=QCursor.pos()
-        if self.geometry().adjusted(-12,-12,12,18).contains(point) or self.owner.dock.geometry().contains(point):self.last_inside=time.monotonic()
-        elif time.monotonic()-self.last_inside>.65:self.hide()
-    def hideEvent(self,event):self.expiry.stop();super().hideEvent(event)
+        point=QCursor.pos();anchor=self.owner.dock.anchor(self.row);bridge=self.geometry().adjusted(-6,-6,6,18)
+        # Only the source icon keeps its picker open; another app has its own picker.
+        inside_icon=abs(point.x()-anchor.x())<self.owner.dock.slot/2 and self.owner.dock.geometry().contains(point)
+        if bridge.contains(point) or inside_icon:self.last_inside=time.monotonic()
+        elif time.monotonic()-self.last_inside>.45:self.hide()
+    def hideEvent(self,event):self.expiry.stop();self.previews.close();super().hideEvent(event)
 
 class DesktopShell(QObject):
     def __init__(self,program):
-        super().__init__(program.app);self.program=program;self.b=program.bridge;self.active=False;self.closed=False;self.started=False;self.loading=False;self.apps=[];self.taskbar_rows=[];self.running_rows=[];self.running_targets=set();self.taskbar_loaded=False;self.scanning=False;self._scan_pending=False;self.last_scan=0;self.pending_pick=None;self.pick_token=0;self.launching=set();self._icons={};self.icon_handles={};self.icon_pending=set();self.icon_failed=set();self.bar_active=False;self.bar_hwnd=0;self.bar_rect=None;self.fullscreen=False
+        super().__init__(program.app);self.program=program;self.b=program.bridge;self.active=False;self.closed=False;self.started=False;self.loading=False;self.apps=[];self.taskbar_rows=[];self.shortcuts=[];self._shortcut_signature=None;self.running_rows=[];self.running_targets=set();self.taskbar_loaded=False;self.scanning=False;self._scan_pending=False;self.last_scan=0;self.restarts=[];self.pending_pick=None;self.pick_token=0;self.launching=set();self._icons={};self.icon_handles={};self.icon_pending=set();self.icon_failed=set();self.bar_active=False;self.bar_hwnd=0;self.bar_rect=None;self.fullscreen=False
         self.native=ShellNative(self.b.store.directory,self);self.service=ShellService(Path(__file__).resolve().parent/'main.py',self);self.service.result.connect(self.worker_result);self.service.error.connect(self.worker_error);self.service.inventory.connect(self.inventory_result)
         self.search=SearchWindow(self);self.service.files.connect(self.search.receive_files);self.dock=MacDock(self);self.chooser=WindowChooser(self);self.name_tip=QLabel();self.name_tip.setWindowFlags(Qt.ToolTip|Qt.FramelessWindowHint|Qt.WindowDoesNotAcceptFocus);self.name_tip.setAttribute(Qt.WA_TransparentForMouseEvents);self.name_tip.setTextFormat(Qt.PlainText);self.name_tip.setStyleSheet('background:#263747;color:#fff7ef;border-radius:9px;padding:7px 12px;')
         from PySide6.QtCore import QStandardPaths
@@ -210,14 +250,21 @@ class DesktopShell(QObject):
             self.dock.timer.stop();self.monitor.stop();self.dock.hide();self.search.hide();self.chooser.hide();self.name_tip.hide();self.native.close();self.bar_active=False;self.bar_rect=None
             if hasattr(self.program,'reserve_shell_space'):self.program.reserve_shell_space(False)
             return
-        self.dock.refresh();self.dock.timer.start();self.monitor.start()
+        self.refresh_shortcuts();self.dock.refresh();self.dock.timer.start();self.monitor.start()
         if IS_WINDOWS:self.program.host.attach_auxiliary(int(self.dock.winId()))
         if not self.started:self.load_apps()
-        ready=self.taskbar_loaded
+        ready=bool(self.taskbar_loaded or self.shortcuts)
         d=self.b.store.data
-        self.native.configure(int(self.search.winId()),d.get('hideTaskbar',True) and ready,d.get('winKeySearch',True),int(self.dock.winId()) if ready else 0,d.get('dockAutoHide',False))
+        self.native.configure(int(self.search.winId()),d.get('hideTaskbar',True) and self.taskbar_loaded,d.get('winKeySearch',True),int(self.dock.winId()) if ready else 0,d.get('dockAutoHide',False))
         if self.native.failed:self.b.toast.emit(self.native.failed)
         self.dock.check_edge()
+    def refresh_shortcuts(self):
+        known={r['target'].casefold():r for r in self.apps}
+        rows=[dict(r,name=r['title'],index=i,kind='shortcut',path=known.get(r['target'].casefold(),{}).get('path','')) for i,r in enumerate(self.b.store.data['links'])]
+        signature=repr(rows)
+        if signature==self._shortcut_signature:return
+        self._shortcut_signature=signature;self.shortcuts=rows
+        if self.service.enabled:self.service.request('resolve',rows=rows)
     def load_apps(self):
         if self.loading or self.closed:return
         self.loading=True;self.started=True;self.service.load_inventory()
@@ -229,7 +276,7 @@ class DesktopShell(QObject):
         if self.closed:return
         self.apps=rows
         from app_windows import register_app_shortcuts
-        register_app_shortcuts(rows);self.search.query_changed()
+        register_app_shortcuts(rows);self.refresh_shortcuts();self.dock.refresh();self.search.query_changed()
     def taskbar_ready(self,rows,error=''):
         if self.closed:return
         if rows:
@@ -241,10 +288,13 @@ class DesktopShell(QObject):
         if state==0:
             if self.bar_hwnd and self.bar_hwnd!=hwnd:return
             self.bar_active=False;self.bar_hwnd=0;self.bar_rect=None;self.dock.reveal(False)
-        elif state==2:self.fullscreen=True;self.dock.reveal(False);self.dock.hide();self.chooser.hide();self.name_tip.hide();return
+        elif state==2:self.check_fullscreen();return
         else:
             self.fullscreen=False;self.bar_hwnd=hwnd;self.bar_rect=self.native.bar_rect(hwnd,self.program.pick_screen());self.bar_active=self.bar_rect is not None
         self.dock.reposition();self.workarea_changed();self.dock.check_edge()
+    def check_fullscreen(self):
+        host=getattr(self.program,'host',None)
+        self.fullscreen=bool(IS_WINDOWS and host and host.fullscreen_app(self.program.pick_screen()))
     def workarea_changed(self):
         if self.closed or not self.active:return
         self.dock.reposition()
@@ -255,10 +305,7 @@ class DesktopShell(QObject):
             if not self.started:self.load_apps()
             self.chooser.hide();self.name_tip.hide();self.search.show_search()
     def icon_key(self,row):
-        return str(row.get('icon') or row.get('target') or row.get('path') or row.get('name'))
-    def badge(self,row):
-        from PySide6.QtGui import QPixmap,QFont
-        name=str(row.get('name') or '?');pix=QPixmap(64,64);pix.fill(Qt.transparent);p=QPainter(pix);p.setRenderHint(QPainter.Antialiasing);palette=['#8daac3','#bc929f','#91ada2','#b2a0bd','#c4a278'];color=palette[int(hashlib.sha256(name.encode()).hexdigest()[:4],16)%len(palette)];p.setBrush(QColor(color));p.setPen(Qt.NoPen);p.drawRoundedRect(QRectF(0,0,64,64),15,15);p.setPen(QColor('white'));font=QFont(QApplication.font());font.setPointSize(18);font.setBold(True);p.setFont(font);p.drawText(pix.rect(),Qt.AlignCenter,name[:2].upper());p.end();return QIcon(pix)
+        return str(row.get('icon') or row.get('group') or row.get('target') or row.get('path') or row.get('name'))
     def item_icon(self,row):
         key=self.icon_key(row)
         hwnd=row.get('hwnd')
@@ -268,7 +315,7 @@ class DesktopShell(QObject):
         if row.get('glyph') and str(row.get('target','')).startswith(('shell:','action:','special:','http')):
             self._icons[key]=icon(row['glyph'],self.b.store.data['theme']=='night');return self._icons[key]
         if row.get('icon') and Path(row['icon']).is_file():self._icons[key]=QIcon(row['icon']);return self._icons[key]
-        value=self.badge(row)
+        value=QIcon()
         self._icons[key]=value
         if key not in self.icon_failed and self.service.enabled:
             self.icon_pending.add(key);self.service.icon(dict(row,key=key))
@@ -287,6 +334,10 @@ class DesktopShell(QObject):
                     self._icons[key]=QIcon(QPixmap.fromImage(image))
                 except (ValueError,TypeError):self.icon_failed.add(key)
             self.dock.update();self.search.icon_delay.start();return
+        if action=='resolve':
+            # Ignore a slow response for shortcuts that have since been edited.
+            if [(r.get('index'),r.get('target')) for r in data]==[(r.get('index'),r.get('target')) for r in self.shortcuts]:self.shortcuts=data;self.dock.refresh()
+            return
         if action=='windows':self.running_ready(data);return
         if action=='launch':self.launching.clear();self.schedule_scan()
     def worker_error(self,action,request,error):
@@ -299,14 +350,20 @@ class DesktopShell(QObject):
         if self._scan_pending or self.closed or not self.active:return
         self._scan_pending=True;QTimer.singleShot(160,self.scan_running)
     def periodic_scan(self):
+        if self.closed or not self.active:return
         if self.native.process and self.native.process.poll() is not None:
-            code=self.native.process.returncode;self.native.close();self.bar_active=False;self.bar_rect=None;self.dock.reveal(False);self.b.toast.emit('작업 표시줄 연결이 종료됐습니다. 원래 Windows 표시줄을 복원합니다.');logging.getLogger(__name__).warning('Native shell exit %s',code)
+            code=self.native.process.returncode;self.native.close();self.bar_active=False;self.bar_rect=None;self.restarts=[t for t in self.restarts if time.monotonic()-t<60]
+            if len(self.restarts)<3:
+                self.restarts.append(time.monotonic());QTimer.singleShot(750,self.configure)
+            else:self.b.toast.emit('독 연결 실패. Windows 작업 표시줄을 복원했습니다.')
+            logging.getLogger(__name__).warning('Native shell exit %s; restart %s',code,len(self.restarts))
+        if self.bar_active:self.workarea_changed()
         if self.dock.isVisible() or self.search.isVisible():self.schedule_scan()
     def scan_running(self):
         self._scan_pending=False
         if self.closed:return
         if self.scanning:self._rescan=True;return
-        self.scanning=True;self.last_scan=time.monotonic();self.service.request('windows')
+        self.scanning=True;self.scan_token=self.pick_token;self.last_scan=time.monotonic();self.service.request('windows')
         if not self.service.enabled:self.scanning=False
     def running_ready(self,data):
         if self.closed:return
@@ -314,14 +371,20 @@ class DesktopShell(QObject):
         for row in self.taskbar_rows:
             if matching_windows(row,self.running_rows):self.running_targets.add(row['target'].casefold())
         self.running_targets.update(str(r['target']).casefold() for r in self.running_rows);self.dock.refresh()
+        if self.chooser.isVisible():
+            windows=matching_windows(self.chooser.row,self.running_rows)
+            if [(w['hwnd'],w.get('name')) for w in windows]!=[(w['hwnd'],w.get('name')) for w in self.chooser.entries]:
+                if windows:self.chooser.show_windows(self.chooser.row,windows)
+                else:self.chooser.hide()
         pending=self.pending_pick;self.pending_pick=None
         if pending:
             row,mode,token=pending
-            if token==self.pick_token and (mode=='click' or self.dock.hover_target()==row['target']):self.present_windows(row,mode)
+            if token>getattr(self,'scan_token',token):self.pending_pick=pending;self._rescan=True;pending=None
+            if pending and token==self.pick_token and (mode=='click' or self.dock.hover_target()==row['target']):self.present_windows(row,mode)
         if getattr(self,'_rescan',False):self._rescan=False;self.schedule_scan()
     def choose_item(self,row):
         target=row['target']
-        if target.startswith(('shell:','action:')):self.open_item(row);return
+        if target.startswith(('shell:','action:')) and not matching_windows(row,self.running_rows):self.open_item(row);return
         self.dock.hover_delay.stop();self.pick_token+=1;self.pending_pick=(dict(row),'click',self.pick_token)
         if self.service.enabled:self.schedule_scan()
         else:self.present_windows(row,'click')
@@ -329,28 +392,34 @@ class DesktopShell(QObject):
         if self.closed or (self.pending_pick and self.pending_pick[1]=='click'):return
         self.show_name(row)
         windows=matching_windows(row,self.running_rows)
-        if len(windows)>1:self.chooser.show_windows(row,windows)
+        if windows:self.chooser.show_windows(row,windows)
         elif self.service.enabled:
             self.pick_token+=1;self.pending_pick=(dict(row),'hover',self.pick_token);self.schedule_scan()
     def present_windows(self,row,mode):
         windows=matching_windows(row,self.running_rows)
-        if len(windows)>1:self.chooser.show_windows(row,windows)
+        if len(windows)>1 or (mode=='hover' and windows):self.chooser.show_windows(row,windows)
         elif mode=='click':
             if windows:self.activate_window(windows[0])
             else:self.open_item(row)
-    def activate_window(self,row):
+    def activate_window(self,row,toggle=True):
         self.chooser.hide();self.name_tip.hide();self.dock.after_action()
-        if not select_window(row):self.b.toast.emit('이미 닫힌 창입니다.');self.schedule_scan()
+        if not (select_window(row) if toggle else select_window(row,toggle=False)):self.b.toast.emit('이미 닫힌 창입니다.');self.schedule_scan()
     def show_name(self,row):
-        self.name_tip.setText(str(row.get('name','')));self.name_tip.adjustSize();point=QCursor.pos();g=self.program.pick_screen().geometry();self.name_tip.move(max(g.left()+4,min(point.x()-self.name_tip.width()//2,g.right()-self.name_tip.width()-4)),self.dock.y()-self.name_tip.height()-8);self.name_tip.show()
+        self.name_tip.setText(str(row.get('name','')));self.name_tip.adjustSize();point=self.dock.anchor(row);g=self.program.pick_screen().geometry();self.name_tip.move(max(g.left()+4,min(point.x()-self.name_tip.width()//2,g.right()-self.name_tip.width()-4)),self.dock.y()-self.name_tip.height()-8);self.name_tip.show()
     def open_item(self,row):
         target=row.get('target','')
+        if row.get('group')=='explorer' and row.get('shortcuts'):
+            self.b.launch(row['shortcuts'][0]['index']);return
         if target=='shell:search':self.toggle_search();return
         if target=='action:settings':self.b.settings();return
         if target.startswith('app:') or (IS_WINDOWS and Path(target).suffix.lower() in ('.exe','.lnk')):
             if target in self.launching:return
             self.launching.add(target);self.service.request('launch',row=dict(row));self.dock.after_action();return
         if 'index' in row:self.b.launch(row['index']);return
+        if target.startswith('http'):
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl(target));return
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
         if Path(target).exists():QDesktopServices.openUrl(QUrl.fromLocalFile(target))

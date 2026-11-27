@@ -80,7 +80,7 @@ Item {
         MusicCard {id:player;objectName:"musicCard";visible:cfg.visible&&scene.fg;moving:scene.moving}
         MemoCard {id:memo;objectName:"memoCard";visible:cfg.visible&&scene.fg;available:scene.fg&&scene.surfaceActive}
         CalendarCard {id:calendar;visible:cfg.visible&&scene.fg;now:scene.now}
-        LauncherCard {id:dock;objectName:"launcherCard";visible:cfg.visible&&scene.fg}
+        LauncherCard {id:dock;objectName:"launcherCard";visible:cfg.visible&&scene.fg&&!(s.macDock&&scene.layerRole==="overlay")}
         SystemCard {id:systemMonitor;objectName:"systemCard";visible:cfg.visible&&scene.fg}
         FocusCard {id:focusTimer;objectName:"focusCard";visible:cfg.visible&&scene.fg}
         Item {id:tools;x:1348;y:804;width:198;height:48;visible:scene.fg

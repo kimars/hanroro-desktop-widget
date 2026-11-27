@@ -4,6 +4,9 @@ from media_worker import stdio
 
 def execute(request):
     action=request.get('action')
+    if action=='resolve':
+        from desktop_native import resolve_rows
+        return resolve_rows(request.get('rows',[])[:64])
     if action=='windows':
         from shell_windows import visible_windows
         data=visible_windows();data['paths']=list(data['paths']);return data

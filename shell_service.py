@@ -14,7 +14,7 @@ class ShellService(QObject):
         self.sequence+=1;job={'id':self.sequence,'action':action,**data}
         if not self.enabled or self.closed:return self.sequence
         if action=='windows':self.scan=job
-        elif action=='launch':self.launches=(self.launches+[job])[-8:]
+        elif action in ('launch','resolve'):self.launches=(self.launches+[job])[-8:]
         self.pump();return self.sequence
     def icon(self,row):
         if not self.enabled or self.closed:return

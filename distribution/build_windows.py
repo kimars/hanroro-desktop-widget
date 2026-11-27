@@ -28,6 +28,7 @@ env=os.environ.copy();env['QT_QPA_PLATFORM']='offscreen';env['QT_QUICK_BACKEND']
 subprocess.run([str(PAYLOAD/'_internal/python.exe'),str(PAYLOAD/'_internal/main.py'),'--smoke-run','--preview','--data-dir',str(WORK/'smoke-data')],cwd=PAYLOAD/'_internal',env=env,check=True,timeout=60)
 subprocess.run([sys.executable,str(ROOT/'distribution/check_update_runtime.py'),str(PAYLOAD/'_internal/python.exe'),str(PAYLOAD/'_internal/main.py'),str(WORK/'update-probe')],check=True,timeout=85)
 subprocess.run([sys.executable,str(ROOT/'distribution/check_shell_runtime.py'),str(PAYLOAD/'_internal')],check=True,timeout=40)
+subprocess.run([str(PAYLOAD/'_internal/python.exe'),str(ROOT/'distribution/check_dock_runtime.py'),str(PAYLOAD/'_internal')],check=True,timeout=30)
 output=ROOT/'release/HanroroWidget_Setup_x64.exe';output.parent.mkdir(exist_ok=True)
 subprocess.run([sys.executable,str(ROOT/'distribution/installer/build_installer.py'),'--payload',str(PAYLOAD),'--output',str(output),'--work',str(WORK/'nsis'),'--makensis',r'C:\Program Files (x86)\NSIS\makensis.exe'],check=True)
 subprocess.run([sys.executable,str(ROOT/'distribution/release/publish.py'),'--installer',str(output)],check=True)
